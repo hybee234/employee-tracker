@@ -2,93 +2,116 @@
 //- Required packages/inks -// 
 //--------------------------//
 const inquirer = require('inquirer');
-const queries = require('./db/server.js')
-const mysql = require ('mysql2');
-const mysqlPromise = require ('mysql2/promise');
 
-const questions = require ('./lib/questions.js')  // [HL] Questions
-
-//Output cyan text//
-const outputCyanText = (text) => console.log(`\x1b[36m${text}\x1b[0m`);
+const queries = require('./lib/server.js')
+const mainMenu = require ('./lib/mainMenu.js')    
 
 //--------------------------//
 //- Connection to Database -// 
 //--------------------------//
-const db = mysql.createConnection (
-    {
-        host: "localhost",
-        user: "root",
-        password: "12345678",
-        database: "employee_tracker_db"
-    }, 
-    console.log("Connected!")
-)
+const db = require('./lib/connection.js')
+
 
 //---------------------------//
 //- Prompts to the end user -//
 //---------------------------//
 
-function askQuestions() {
+function launch() {
     inquirer
-        .prompt(questions)
+        .prompt(mainMenu)
 
         .then ((answers) => {
             switch (answers.mainmenu) {
             //- View all departments -//
-                case "viewDepartments":
-                    
-                db.query('SELECT * FROM department', async function (err, results) {
-                    try{
-                        const show = await console.table(results)
-                        const query = await console.log(`\x1b[33m   **${answers.mainmenu}**\x1b[0m`);
-                        const startagain = await askQuestions();
-                    }
-                    catch (err) {
-                    res.json(err)
-                    }
-                })
-                
-                 
-
-                // async function viewDept () {
-                //         const [rows,fields] = await db.query('SELECT * FROM department')
-                //         console.table(rows);
-                    
-                //     console.log(await `\x1b[33m   **${answers.mainmenu}**\x1b[0m`);
-                //     await askQuestions();
-                //     }
-                
-                    return 
+                case "viewDepartments":                   
+                    db.query('SELECT * FROM department', async function (err, results) {
+                        try{
+                            const query = await console.log(`\x1b[33m   **${answers.mainmenu}**\x1b[0m`);
+                            const show = await console.table(results)
+                            const startagain = await launch();
+                        }
+                        catch (err) {
+                        console.log(err)
+                        }
+                    })
                 break;
             //- View all roles -//
-                case "viewRoles": queries.viewRoles(db) //turn to promise
-                    console.log("  **viewRoles**")                
-                    return askQuestions()
+                case "viewRoles": 
+                    db.query('SELECT * FROM role', async function (err, results) {
+                        try{
+                            const query = await console.log(`\x1b[33m   **${answers.mainmenu}**\x1b[0m`);
+                            const show = await console.table(results)
+                            const startagain = await launch();
+                        }
+                        catch (err) {
+                            console.log(err)
+                        }
+                    })
                 break;
             //- View all employees -//
-                case "viewEmployees": queries.viewEmployees(db) //turn to promise
-                    console.log("  **viewEmployees**")                
-                    return askQuestions()
+                case "viewEmployees":                     
+                db.query('SELECT * FROM employee', async function (err, results) {
+                    try{
+                        const query = await console.log(`\x1b[33m   **${answers.mainmenu}**\x1b[0m`);
+                        const show = await console.table(results)
+                        const startagain = await launch();
+                    }
+                    catch (err) {
+                        console.log(err)
+                    }
+                })
                 break;
             //- Add department -//
+                // id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                // name VARCHAR(30) NOT NULL
                 case "addDepartment":
-                    console.log("  **addDepartment**")  
-                    return askQuestions()
+                    console.log("  **addDepartment**")
+                    inquirer
+                        .prompt (
+                            {type: 'input',
+                            name: 'newDepartment',
+                            message: 'Please enter the new Department name'}
+                        ).then (newDepartment)
+                            db.query('INSERT INTO department (name) VALUES ("?")', newDepartment, async function (err, result) {
+                                try{
+                                    const query = await console.log(`\x1b[33m   **${answers.mainmenu}**\x1b[0m`);
+                                    const show = await console.table("Dept added successfully")
+                                    const startagain = await launch();
+                                }
+                                catch (err) {
+                                    console.log(err)
+                                }
+                            })
+                            
                 break;
             //- Add role -//
+                // id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                // title VARCHAR(30) NOT NULL,
+                // salary DECIMAL,
+                // department_id INT, - which department
                 case "addRole":
                     console.log("  **addRole**")  
-                    return askQuestions()
+                    return launch()
                 break;
             //- Add employee -//
+                // id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                // first_name VARCHAR(30) NOT NULL,
+                // last_name VARCHAR(30) NOT NULL,
+                // role_id INT, - which role
+                // manager_id - which manager
                 case "addEmployee":
                     console.log("  **addEmployee**")  
-                    return askQuestions()
+                    return launch()
                 break;
             //- Update employee -//
+                // id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                // first_name VARCHAR(30) NOT NULL,
+                // last_name VARCHAR(30) NOT NULL,
+                // role_id INT, - which role
+                // manager_id - which manager
                 case "updateEmployee":
                     console.log("  **updateEmployee**")  
-                    return askQuestions()
+                    return launch()
                 break;
             //- Quit -//
                 case "quit": 
@@ -97,15 +120,6 @@ function askQuestions() {
                     return;
                 break;
             }
-            
-
-            // //Quit//
-            // if (answers.mainmenu === "quit") {
-            //     return answers;
-            // } else {
-            //     return askQuestions();
-            // }
-
         })
         .catch ((err) => {
             console.log(err)
@@ -116,6 +130,4 @@ function askQuestions() {
 //---------------------------------//
 //- Call function to the end user -//
 //---------------------------------//
-askQuestions()
-    // .then()
-    // .catch((error) => {})
+launch()
