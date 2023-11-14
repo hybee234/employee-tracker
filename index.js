@@ -15,6 +15,7 @@ const db = require('./lib/connection.js')
 let arrayDept;                      // array of departments available (used in creating new role)
 // let roleDept;                  // new Role department value (used in creating new role)
 let addDeptCalledByAddRole = 0;     // indicator to determine if addDepartment function was called by addRole
+let addRoleCalledByAddEmployee = 0; // indicator to determine if addRole function was called by addEmployee
 
 //---------------------------//
 //- Prompts to the end user -//
@@ -127,7 +128,8 @@ const viewEmployees = async() => {
         ORDER BY d.name, r.salary DESC;
         `
         const response = await db.promise().query(employeeSQL)         
-            console.log(`\x1b[33m\n   ** View all Employees **\x1b[0m \n`);
+            console.log(`\x1b[33m\n              ** View all Employees **\x1b[0m`);
+            console.log(`\x1b[33m   ** Sorted by Department_Name and Salary (DESC) **\x1b[0m \n`);
             console.table(response[0])
             launch();
     }
@@ -158,8 +160,8 @@ const addDepartment = async () => {
         console.log(`\x1b[33m\n   ** New departemnt "${answers.newDepartment}" added successfully **\x1b[0m \n`)        
         if (addDeptCalledByAddRole === 1) {         // Check if addDepartment was called by Add Role - if yes then change addDpetCalledByAddRole to zero and return to add Role 
             // console.log(`if statement addDeptCalledByAddRole = ${addDeptCalledByAddRole}`)
-            return (answers.newDepartment);        }
-        else {
+            return (answers.newDepartment);
+        } else {
             // console.log("addDepartment calling MainMenu")
             // console.log(`else addDeptCalledByAddRole = ${addDeptCalledByAddRole}`)
             const startagain = await launch();      // Go back to main menu (call launch())             
@@ -184,7 +186,7 @@ const addRole = async () => {
     try {
         const response = await db.promise().query(`SELECT * FROM department;`)                    // Pull fresh extract of department
             arrayDept = response[0]                                                                                   // set ArrayDept to equal reponse index value zero
-            arrayDept.unshift({value: -1, name: ' ↻  Back to main Menu'}, {value: 0, name: ' ＋ Create New Department for this Role'})       // return to main menu and create department options
+            arrayDept.unshift({value: -1, name: ' ↻  Cancel and return to main Menu'}, {value: 0, name: ' ＋ Create New Department for this Role'})       // return to main menu and create department options
             console.log("Array Dept")
             console.log(arrayDept)
 
@@ -233,7 +235,12 @@ const addRole = async () => {
         await db.promise().query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [answers.title, answers.salary, roleDeptId]);
             console.log(`\x1b[33m\n   ** New Role "${answers.title}" added successfully **\x1b[0m \n`)   
             // console.log("Role calling MainMenu")
-            launch();    
+        if (addRoleCalledByAddEmployee === 1) {
+            addRoleCalledByAddEmployee = 0  // set value to zero
+            return (answers.title)  // return the role_id (TODO)  <--------------- need to pass freshly created role_id back for storage
+        } else {
+            launch();
+        }            
     } catch (err) {
         console.log(err);
         
@@ -255,19 +262,19 @@ const addEmployee = async () => {
     try{
         const responseRole = await db.promise().query(`SELECT id as value, title AS name FROM role;`)                                                    // Pull fresh extract of role
             arrayRole = responseRole[0]                                                                                                     // set ArrayRole to equal reponse index value zero
-            arrayRole.unshift({value: -1, name: ' ↻  Back to main Menu'}, {value: 0, name: ' ＋ Create New Role for this Employee'})    // return to main menu and create department options
+            arrayRole.unshift({value: -1, name: ' ↻  Cancel and return to main Menu'}, {value: 0, name: ' ＋ Create New Role for this Employee'})    // return to main menu and create department options
             console.log("Array Role")
             console.log(arrayRole)
 
         const responseManager = await db.promise().query(`SELECT id as value, CONCAT(last_name,", ", first_name) as name FROM employee;`)                                                    // Pull fresh extract of role
             arrayManager = responseManager[0]                                                                                                     // set ArrayRole to equal reponse index value zero
-            arrayManager.unshift({value: -1, name: ' ↻  Back to main Menu'})    // return to main menu option
+            arrayManager.unshift({value: -1, name: ' ↻  Cancel and return to main Menu'})    // return to main menu option
             console.log("Array Manager")
             console.log(arrayManager)
 
 
 
-        const answers = await inquirer.prompt ([
+        const employeeName = await inquirer.prompt ([
             {
                 type: 'input',
                 name: 'firstName',
@@ -277,13 +284,43 @@ const addEmployee = async () => {
                 type: 'input',
                 name: 'lastName',
                 message: 'Please provide the Last Name of the new employee:'
-            },      
+            } 
+        ]);   
+            
+        const employeeRole = await inquirer.prompt ([
             {
                 type: 'list',
                 name: 'role',
                 message: "Please select the role of the new Employee",
                 choices: arrayRole
-            },
+            }
+        ]);
+        
+        let employeeRoleID = employeeRole.role
+        
+        if (employeeRoleID === -1) {
+            console.log (`employeeRole.role = ${employeeRoleID} - return to main menu`)
+            launch();
+            return;
+        } else
+        
+        if (employeeRoleID === 0) {
+            console.log (`employeeRoleID = ${employeeRoleID} - create role`)
+            addRoleCalledByAddEmployee = 1                  // flags that addRole was called by addEmployee function
+            employeeNewRole = await addRole();            // employeeRoleID ()
+
+            const employeeNewRoleID = await db.promise().query('SELECT id from role WHERE title = ?', employeeNewRole)
+
+            employeeRoleID = employeeNewRoleID[0][0].id     // assign new Role ID to employee Role ID
+            console.log (`employeeRoleID = ${employeeRoleID} - (after creating new role)`)
+            
+            
+        } else {            
+            console.log (`employeeRoleID = ${employeeRoleID} - keep going`)
+        }
+        
+
+        const employeeManager = await inquirer.prompt ([
             {
                 type: 'list',
                 name: 'manager',
@@ -292,11 +329,15 @@ const addEmployee = async () => {
             },
         ])
         
-            console.log (answers.firstName)
-            console.log (answers.lastName)
-            console.log (answers.role)
-            console.log (answers.manager)
+            console.log (`firstName = ${employeeName.firstName}`)
+            console.log (`lastName = ${employeeName.lastName}`)
+            console.log (`role = ${employeeRoleID}`)
+            console.log (`manager = ${employeeManager.manager}`)
 
+            await db.promise().query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)', [employeeName.firstName, employeeName.lastName, employeeRoleID, employeeManager.manager]);
+            console.log(`\x1b[33m\n   ** New employee "${employeeName.firstName} ${employeeName.lastName}" added successfully **\x1b[0m \n`)   
+            // console.log("Role calling MainMenu")
+            launch();    
 
     } catch (err) {
     console.log(err);
