@@ -160,6 +160,7 @@ const addDepartment = async () => {
     // title VARCHAR(30) NOT NULL,
     // salary DECIMAL,
     // department_id INT, - which department
+
 const addRole = async () => {
     console.log(`\x1b[33m   **Add new Role**\x1b[0m`);
     let arrayDept;
@@ -168,13 +169,13 @@ const addRole = async () => {
     try {
         const response = await db.promise().query(`SELECT id as value, name FROM department;`)   // Pull fresh extract of department
         
-        arrayDept = response[0]
-        arrayDept.unshift({value: 00, name: 'Create Department'})       
-
+        arrayDept = response[0]                                                                 //set ArrayDept to equal reponse index value zero
+        arrayDept.unshift({value: -1, name: ' ↻ Back to main Menu'}, {value: 0, name: 'Create Department'})       // return to main menu and create department options
+        
         console.log("Array Dept")
         console.log(arrayDept)
 
-        const answer = await inquirer.prompt([
+        const answer = await inquirer.prompt([                  // ask the user which department they want to add to
             {
                 type: "list",
                 name: "roleDepartment",                
@@ -183,19 +184,31 @@ const addRole = async () => {
             },
         ])
 
+        //Turn this if statement into a proper async/await so that the next process waits for it
+
+        let roleDeptValue;
         
-        let roleDepartment;
-        if (answer.roleDepartment === 00) {       // if equal to 'Create Department"
-            roleDepartment = await addDepartment();
-            } else {
-            roleDepartment = answer.roleDepartment;                
+        
+        if (await answer.roleDepartment === 0) {              // if equal to 'Create Department"
+            roleDeptValue = await addDepartment();     // call Add department function
+        } else if (await answer.roleDepartment === -1) {
+            launch();
+            return;
+        } else {
+            roleDeptValue = await answer.roleDepartment;     // use value provided           
         }
 
-        const a = await console.log("roleDepartment:")
-        const b = await console.log(roleDepartment)
+        // const a = await console.log("roleDeptValue:")
+        // const b = await console.log(roleDeptValue)
+
+        // asks the rest of the questions to gather what's needed for the Role
+        // 
+
+        // launch();
+
     } catch (err) {
         console.log(err);
-        launch();
+        
     }
 };
     
