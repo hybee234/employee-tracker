@@ -136,30 +136,6 @@ const viewEmployees = async() => {
     }    
 }
 
-// const viewEmployees = async() => {
-//     db.query('SELECT * FROM employee', async function (err, results) {
-//         try{
-//             const query = await console.log(`\x1b[33m\n   ** View all Employees **\x1b[0m \n`);
-//             const show = await console.table(results)
-//             const startagain = await launch();
-//         }
-//         catch (err) {
-//             console.log(err)
-//         }
-//     })
-// }
-
-// const addRole = async () => {
-//     console.log(`\x1b[33m\n   **Add new Role**\x1b[0m \n`);
-
-//     // Create department constant
-//     try {
-//         const response = await db.promise().query(`SELECT * FROM department;`)                    // Pull fresh extract of department
-//             arrayDept = response[0]                                                                                   // set ArrayDept to equal reponse index value zero
-//             arrayDept.unshift({value: -1, name: ' ↻  Back to main Menu'}, {value: 0, name: ' ＋ Create New Department for this Role'})       // return to main menu and create department options
-//             console.log("Array Dept")
-//             console.log(arrayDept)
-
 //---------------------------------//
 //- Function - Add New Department -//
 //---------------------------------//
@@ -276,7 +252,56 @@ const addRole = async () => {
 
 const addEmployee = async () => {
     console.log(`\x1b[33m\n   **Add new Employee**\x1b[0m \n`); 
+    try{
+        const responseRole = await db.promise().query(`SELECT id as value, title AS name FROM role;`)                                                    // Pull fresh extract of role
+            arrayRole = responseRole[0]                                                                                                     // set ArrayRole to equal reponse index value zero
+            arrayRole.unshift({value: -1, name: ' ↻  Back to main Menu'}, {value: 0, name: ' ＋ Create New Role for this Employee'})    // return to main menu and create department options
+            console.log("Array Role")
+            console.log(arrayRole)
 
+        const responseManager = await db.promise().query(`SELECT id as value, CONCAT(last_name,", ", first_name) as name FROM employee;`)                                                    // Pull fresh extract of role
+            arrayManager = responseManager[0]                                                                                                     // set ArrayRole to equal reponse index value zero
+            arrayManager.unshift({value: -1, name: ' ↻  Back to main Menu'})    // return to main menu option
+            console.log("Array Manager")
+            console.log(arrayManager)
+
+
+
+        const answers = await inquirer.prompt ([
+            {
+                type: 'input',
+                name: 'firstName',
+                message: 'Please provide the First Name of the new employee:'                
+            },
+            {
+                type: 'input',
+                name: 'lastName',
+                message: 'Please provide the Last Name of the new employee:'
+            },      
+            {
+                type: 'list',
+                name: 'role',
+                message: "Please select the role of the new Employee",
+                choices: arrayRole
+            },
+            {
+                type: 'list',
+                name: 'manager',
+                message: "Please select the manager of the new Employee",
+                choices: arrayManager
+            },
+        ])
+        
+            console.log (answers.firstName)
+            console.log (answers.lastName)
+            console.log (answers.role)
+            console.log (answers.manager)
+
+
+    } catch (err) {
+    console.log(err);
+    
+    }
 }
 
 
