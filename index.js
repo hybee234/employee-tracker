@@ -25,12 +25,10 @@ const requestRoleInquirerSQL =              // SQL to pull all Role in an array 
 
 `
 SELECT 
-CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m",r.title,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m$ ",r.salary,"\x1b[0m") as name,
+CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id ,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m", r.title ,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m", CONCAT("$",FORMAT(r.salary ,"C")),"\x1b[0m") as name,
 r.id as value
 FROM role r
 `
-
-
 
 const requestEmployeeInquirerSQL =          // SQL to pull all Role in an array suitable for inquirer
 `
@@ -152,7 +150,7 @@ const viewDepartments = async () => {
             SELECT 
             d.id as Department_ID,
             d.name AS Department,r.title AS Role,
-            r.salary AS Salary,
+            CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
             CONCAT(e.last_name,", ",e.first_name) as Employee,
             CONCAT(m.last_name,", ",m.first_name) as Manager
             FROM department d
@@ -189,9 +187,9 @@ const viewRoles = async () => {
         const roleSQL = `
         SELECT 
         r.id AS Role_ID,
-        d.name AS Department_Name,
-        r.title AS Role_Title,
-        r.salary AS Role_Salary        
+        d.name AS Department,
+        r.title AS Role,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary     
         FROM role r
         LEFT JOIN department d ON r.department_id = d.id;
         `
@@ -227,7 +225,7 @@ const viewEmployees = async() => {
         CONCAT(e.last_name,", ",e.first_name) as Name,
         d.name AS Department,
         r.title AS Role,
-        r.salary AS Salary,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
         CONCAT(m.last_name,", ",m.first_name) as Manager
         FROM employee e
         LEFT JOIN role r ON e.role_id = r.id
@@ -366,9 +364,9 @@ const addRole = async () => {
         let showNewRoleSQL = `
         SELECT 
         r.id AS Role_ID,
-        r.title AS Role_Title,
-        r.salary AS Role_Salary,
-        d.name AS Department_Name
+        r.title AS Role,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
+        d.name AS Department
         FROM role r            
         LEFT JOIN department d ON r.department_id = d.id
         WHERE r.id = (SELECT MAX(r.id) FROM role r);
@@ -499,7 +497,7 @@ const addEmployee = async () => {
             e1.last_name AS Last_Name,
             d.name AS Department,
             r.title AS Role,
-            r.salary AS Salary,
+            CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
             e2.first_name AS Manager_First_Name,
             e2.last_name AS Manager_Last_Name
             FROM employee e1
@@ -561,7 +559,7 @@ const updateEmployee = async () => {
         CONCAT(e1.last_name,", ",e1.first_name) as Name,
         d.name AS Department,
         r.title AS Role,
-        r.salary AS Salary,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
         CONCAT(e2.last_name,", ",e2.first_name) as Manager
         FROM employee e1
         LEFT JOIN role r ON e1.role_id = r.id
@@ -596,7 +594,7 @@ const updateEmployee = async () => {
             SELECT 
             r.id as Role_ID,
             r.title as Title,
-            r.salary as Salary,
+            CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
             d.name as Department
             FROM role r
             LEFT JOIN department d ON r.department_id = d.id
@@ -665,7 +663,7 @@ const updateEmployee = async () => {
         CONCAT(e1.last_name,", ",e1.first_name) as Name,
         d.name AS Department,
         r.title AS Role,
-        r.salary AS Salary,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
         CONCAT(e2.last_name,", ",e2.first_name) as Manager
         FROM employee e1
         LEFT JOIN role r ON e1.role_id = r.id
@@ -717,7 +715,7 @@ const viewEmployeesByManager = async () => {
         CONCAT(m.last_name,", ",m.first_name) as Manager,
         CONCAT(e.last_name,", ",e.first_name) as Employee,
         r.title AS Role,
-        r.salary AS Salary,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
         d.name AS Department
         FROM employee e
         LEFT JOIN role r ON e.role_id = r.id
@@ -768,7 +766,7 @@ const viewEmployeesByDepartment = async () => {
         d.name AS Department,
         CONCAT(e.last_name,", ",e.first_name) as Employee,
         r.title AS Role,
-        r.salary AS Salary,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
         CONCAT(m.last_name,", ",m.first_name) as Manager
         FROM employee e
         LEFT JOIN role r ON e.role_id = r.id
@@ -820,12 +818,13 @@ const viewTotalSalaryDept = async () => {
             SELECT 
             d.id as Department_ID,
             d.name AS Department,
-            SUM(r.salary) as Salary
+            CONCAT("$",FORMAT (SUM(r.salary), 'C')) as Total_Salary_Spend
             FROM employee e
             LEFT JOIN role r ON e.role_id = r.id
             LEFT JOIN department d ON r.department_id = d.id
             LEFT JOIN employee m ON e.manager_id = m.id
-            GROUP BY d.id;
+            GROUP BY d.id
+            ORDER BY d.id;
             `
         } else {
             requestDeptSalarySQL =
@@ -833,7 +832,7 @@ const viewTotalSalaryDept = async () => {
             SELECT 
             d.id as Department_ID,
             d.name AS Department,
-            SUM(r.salary) as Salary
+            CONCAT("$",FORMAT (SUM(r.salary), 'C')) as Total_Salary_Spend
             FROM employee e
             LEFT JOIN role r ON e.role_id = r.id
             LEFT JOIN department d ON r.department_id = d.id
@@ -971,7 +970,7 @@ const deleteRole = async () => {
         SELECT 
         r.id as Role_ID,
         r.title as Title,
-        r.salary as Salary,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
         d.name as Department
         FROM role r
         LEFT JOIN department d ON r.department_id = d.id
@@ -1057,7 +1056,7 @@ const deleteEmployee = async () => {
         CONCAT(e.last_name,", ",e.first_name) as Name,
         d.name AS Department,
         r.title AS Role,
-        r.salary AS Salary,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
         CONCAT(m.last_name,", ",m.first_name) as Manager
         FROM employee e
         LEFT JOIN role r ON e.role_id = r.id
