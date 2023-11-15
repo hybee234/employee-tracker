@@ -11,20 +11,21 @@ const db = require('./lib/connection.js')
 //--------------------//
 //- Global Variables -// 
 //--------------------//
-
-
 let addDeptCalledByAddRole = 0;             // indicator to determine if addDepartment function was called by addRole
 let addRoleCalledByAddEmployee = 0;         // indicator to determine if addRole function was called by addEmployee
 let viewEmpCalledByUpdateEmp = 0;           // indicator to determine if viewEmployee function was called by updateEmployee
 
-
+//--------------//
+//- Global SQL -//
+//--------------//
+let requestDeptSalarySQL = "";              // Used by viewTotalSalaryDept to set up SQL to view All department vs One department
 const requestRoleInquirerSQL =              // SQL to pull all Role in an array suitable for inquirer
 `
 SELECT 
 CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m",r.title,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m$ ",r.salary,"\x1b[0m\x1b[90m, Dept = \x1b[0m\x1b[32m",d.name,"\x1b[0m") as name,
 r.id as value
 FROM role r
-JOIN department d ON r.department_id = d.id
+LEFT JOIN department d ON r.department_id = d.id
 `
 
 const requestEmployeeInquirerSQL =          // SQL to pull all Role in an array suitable for inquirer
@@ -33,8 +34,8 @@ SELECT
 CONCAT("● \x1b[90m ID = \x1b[33m", e1.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",e1.last_name,"\x1b[0m\x1b[90m, \x1b[0m\x1b[32m",e1.first_name,"\x1b[0m") as name,
 e1.id as value
 FROM employee e1
-JOIN role r ON e1.role_id = r.id
-JOIN department d ON r.department_id = d.id
+LEFT JOIN role r ON e1.role_id = r.id
+LEFT JOIN department d ON r.department_id = d.id
 LEFT JOIN employee e2 ON e1.manager_id = e2.id;
 `
 
@@ -153,7 +154,7 @@ const viewRoles = async () => {
         r.salary AS Role_Salary,
         r.id AS Role_ID
         FROM role r
-        JOIN department d ON r.department_id = d.id
+        LEFT JOIN department d ON r.department_id = d.id
         ORDER BY d.name, r.salary DESC;
         `
         const response = await db.promise().query(roleSQL)
@@ -185,8 +186,8 @@ const viewEmployees = async() => {
         r.salary AS Salary,
         CONCAT(e2.last_name,", ",e2.first_name) as Manager
         FROM employee e1
-        JOIN role r ON e1.role_id = r.id
-        JOIN department d ON r.department_id = d.id
+        LEFT JOIN role r ON e1.role_id = r.id
+        LEFT JOIN department d ON r.department_id = d.id
         LEFT JOIN employee e2 ON e1.manager_id = e2.id;
         `
         const response = await db.promise().query(employeeSQL)
@@ -324,7 +325,7 @@ const addRole = async () => {
         r.salary AS Role_Salary,
         d.name AS Department_Name
         FROM role r            
-        JOIN department d ON r.department_id = d.id
+        LEFT JOIN department d ON r.department_id = d.id
         WHERE r.id = (SELECT MAX(r.id) FROM role r);
         `
         const showNewRoleQuery = await db.promise().query(showNewRoleSQL);        
@@ -457,8 +458,8 @@ const addEmployee = async () => {
             e2.first_name AS Manager_First_Name,
             e2.last_name AS Manager_Last_Name
             FROM employee e1
-            JOIN role r ON e1.role_id = r.id
-            JOIN department d ON r.department_id = d.id
+            LEFT JOIN role r ON e1.role_id = r.id
+            LEFT JOIN department d ON r.department_id = d.id
             LEFT JOIN employee e2 ON e1.manager_id = e2.id                
             WHERE e1.id = (SELECT MAX(e1.id) FROM employee e1);
             `
@@ -518,8 +519,8 @@ const updateEmployee = async () => {
         r.salary AS Salary,
         CONCAT(e2.last_name,", ",e2.first_name) as Manager
         FROM employee e1
-        JOIN role r ON e1.role_id = r.id
-        JOIN department d ON r.department_id = d.id
+        LEFT JOIN role r ON e1.role_id = r.id
+        LEFT JOIN department d ON r.department_id = d.id
         LEFT JOIN employee e2 ON e1.manager_id = e2.id              
         WHERE e1.id = ?;
         `
@@ -553,7 +554,7 @@ const updateEmployee = async () => {
             r.salary as Salary,
             d.name as Department
             FROM role r
-            JOIN department d ON r.department_id = d.id
+            LEFT JOIN department d ON r.department_id = d.id
             `
             // SQL query requested
             const requestRole = await db.promise().query(requestRoleSQL)           // Pull fresh extract of role
@@ -622,8 +623,8 @@ const updateEmployee = async () => {
         r.salary AS Salary,
         CONCAT(e2.last_name,", ",e2.first_name) as Manager
         FROM employee e1
-        JOIN role r ON e1.role_id = r.id
-        JOIN department d ON r.department_id = d.id
+        LEFT JOIN role r ON e1.role_id = r.id
+        LEFT JOIN department d ON r.department_id = d.id
         LEFT JOIN employee e2 ON e1.manager_id = e2.id              
         WHERE e1.id = ?;
         `
@@ -674,8 +675,8 @@ const viewEmployeesByManager = async () => {
         r.salary AS Salary,
         d.name AS Department
         FROM employee e
-        JOIN role r ON e.role_id = r.id
-        JOIN department d ON r.department_id = d.id
+        LEFT JOIN role r ON e.role_id = r.id
+        LEFT JOIN department d ON r.department_id = d.id
         LEFT JOIN employee m ON e.manager_id = m.id
         WHERE m.id = ?;
         `
@@ -690,11 +691,6 @@ const viewEmployeesByManager = async () => {
         console.log(err);        
     };
 };
-
-
-
-
-
 
 //-----------------------------------------------//
 //- Function - View all Employees By Department -//
@@ -730,8 +726,8 @@ const viewEmployeesByDepartment = async () => {
         r.salary AS Salary,
         CONCAT(m.last_name,", ",m.first_name) as Manager
         FROM employee e
-        JOIN role r ON e.role_id = r.id
-        JOIN department d ON r.department_id = d.id
+        LEFT JOIN role r ON e.role_id = r.id
+        LEFT JOIN department d ON r.department_id = d.id
         LEFT JOIN employee m ON e.manager_id = m.id
         WHERE d.id = ?
         `
@@ -754,13 +750,56 @@ const viewEmployeesByDepartment = async () => {
 
 const viewTotalSalaryDept = async () => {    
     console.log("");
-    console.log(`\x1b[35m  ┌──────────────────────────────────┐\x1b[0m`);
-    console.log(`\x1b[35m  │ View total Salary for Department │\x1b[0m`);
-    console.log(`\x1b[35m  └──────────────────────────────────┘\x1b[0m`);    
+    console.log(`\x1b[35m  ┌─────────────────────────────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ View Total Salary Budget for Department │\x1b[0m`);
+    console.log(`\x1b[35m  └─────────────────────────────────────────┘\x1b[0m`);    
 
     try{
+        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);           // Pull fresh extract of employee  (requestRoleInquirerSQL is global const)          
+        let departmentInquirer = requestDepartmentInquirer[0];                                 // Role array "roleInquirer" created           
+        departmentInquirer.unshift({value: 'all', name: ' \x1b[31m∑\x1b[0m  Show summary for all Departments'})   // add options to return to main menu and create department options
+        //Inquirer prompt
+        const deptWhich = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'dept',
+                pageSize: 12,
+                message: "Select the DEPARTMENT you'd like to view total SALARY in:",
+                choices: departmentInquirer
+            },
+        ]);
+        console.log  (deptWhich.dept)
+        // Do you want to do a gropby sum function?
+        if (deptWhich.dept === 'all') {
+            requestDeptSalarySQL =
+            `
+            SELECT 
+            d.id as Department_ID,
+            d.name AS Department,
+            SUM(r.salary) as Salary
+            FROM employee e
+            LEFT JOIN role r ON e.role_id = r.id
+            LEFT JOIN department d ON r.department_id = d.id
+            LEFT JOIN employee m ON e.manager_id = m.id
+            GROUP BY d.id;
+            `
+        } else {
+            requestDeptSalarySQL =
+            `
+            SELECT 
+            d.id as Department_ID,
+            d.name AS Department,
+            SUM(r.salary) as Salary
+            FROM employee e
+            LEFT JOIN role r ON e.role_id = r.id
+            LEFT JOIN department d ON r.department_id = d.id
+            LEFT JOIN employee m ON e.manager_id = m.id
+            WHERE d.id = ?;
+            ` 
+        }
 
-
+        const requestDeptSalary = await db.promise().query(requestDeptSalarySQL,deptWhich.dept);
+        console.table (requestDeptSalary[0]); 
 
         launch();
     }
