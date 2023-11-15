@@ -54,11 +54,10 @@ function launch() {
                 break;
             //- Quit -//
                 case "quit": 
-                    console.log("Thanks for visiting!")
                     console.log("");
-                    console.log(`\x1b[31m  ┌────────────────────────────────┐\x1b[0m`);
-                    console.log(`\x1b[31m  │ ✌️ Thanks for dropping by! ✌️ │\x1b[0m`);
-                    console.log(`\x1b[31m  └────────────────────────────────┘\x1b[0m`);
+                    console.log(`\x1b[31m  ┌─────────────────────────┐\x1b[0m`);
+                    console.log(`\x1b[31m  │ Thanks for dropping by! │\x1b[0m`);
+                    console.log(`\x1b[31m  └─────────────────────────┘\x1b[0m`);
                     process.exit()
                     return;
                 break;
@@ -173,14 +172,17 @@ const addDepartment = async () => {
         ])
         
         await db.promise().query('INSERT INTO department (name) VALUES (?)', answers.newDepartment);        
-        console.log(`\x1b[33m\n   ⭐ New departemnt "${answers.newDepartment}" added successfully ⭐\x1b[0m \n`)        
+        console.log(`\x1b[33m\n   ⭐ New departemnt "${answers.newDepartment}" added successfully ⭐\x1b[0m \n`) 
+                
+        const showNewDept = await db.promise().query('SELECT id as Department_ID, name as Department_Name FROM department WHERE name = ?', answers.newDepartment);        
+        console.table (showNewDept[0])
         if (addDeptCalledByAddRole === 1) {         // Check if addDepartment was called by Add Role - if yes then change addDpetCalledByAddRole to zero and return to add Role 
             // console.log(`if statement addDeptCalledByAddRole = ${addDeptCalledByAddRole}`)
             return (answers.newDepartment);
         } else {
             // console.log("addDepartment calling MainMenu")
             // console.log(`else addDeptCalledByAddRole = ${addDeptCalledByAddRole}`)
-            const startagain = await launch();      // Go back to main menu (call launch())             
+            launch();      // Go back to main menu (call launch())             
         }   
     }catch (err) {
         console.log(err)
@@ -212,7 +214,8 @@ const addRole = async () => {
             {
                 type: "list",
                 name: "roleDepartment",                
-                message: "Which department does this role sit under?",
+                pageSize: 12,
+                message: "Which department does this role sit under?",                
                 choices: arrayDept
             },
         ])
@@ -241,7 +244,12 @@ const addRole = async () => {
             {
                 type: 'input',
                 name: 'salary',
-                message: 'What is the Salary of this new Role?'
+                message: 'What is the Salary of this new Role?',
+                validate: (answer) => {
+                    if (isNaN(answer)) {
+                        return false, "please enter valid number";  
+                    } return true;
+                }
             }
         ])
         // Insert the record into the role table//
@@ -251,7 +259,22 @@ const addRole = async () => {
             const roleDeptId = roleDeptIdRes[0][0].id;
 
         await db.promise().query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [answers.title, answers.salary, roleDeptId]);
-            console.log(`\x1b[33m\n   ⭐ New Role "${answers.title}" added successfully ⭐\x1b[0m \n`)   
+            console.log(`\x1b[33m\n   ⭐ New Role "${answers.title}" added successfully ⭐\x1b[0m \n`)
+        
+            //Log freshly created role for user to see - utilising maximum ID value on role table (Max = newest)
+        let showNewRoleQuery = `
+        SELECT 
+        r.id AS Role_ID,
+        r.title AS Role_Title,
+        r.salary AS Role_Salary,
+        d.name AS Department_Name
+        FROM role r            
+        JOIN department d ON r.department_id = d.id
+        WHERE r.id = (SELECT MAX(r.id) FROM role r);
+        `
+        const showNewRole = await db.promise().query(showNewRoleQuery);        
+        console.table (showNewRole[0])
+
             // console.log("Role calling MainMenu")
         if (addRoleCalledByAddEmployee === 1) {
             addRoleCalledByAddEmployee = 0  // set value to zero
@@ -314,6 +337,7 @@ const addEmployee = async () => {
             {
                 type: 'list',
                 name: 'role',
+                pageSize: 12,
                 message: "Please select the role of the new Employee",
                 choices: arrayRole
             }
@@ -346,6 +370,7 @@ const addEmployee = async () => {
             {
                 type: 'list',
                 name: 'manager',
+                pageSize: 12,
                 message: "Please select the manager of the new Employee",
                 choices: arrayManager
             },
@@ -363,7 +388,27 @@ const addEmployee = async () => {
             // console.log (`manager = ${employeeManager.manager}`)
 
             await db.promise().query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)', [employeeName.firstName, employeeName.lastName, employeeRoleID, employeeManager.manager]);
-            console.log(`\x1b[33m\n   ⭐ New employee "${employeeName.firstName} ${employeeName.lastName}" added successfully ⭐\x1b[0m \n`)   
+            console.log(`\x1b[33m\n   ⭐ New employee "${employeeName.firstName} ${employeeName.lastName}" added successfully ⭐\x1b[0m \n`) 
+            
+            // Show new employee by MAX employee ID value
+            const showNewEmployeeSQL =`
+            SELECT 
+            e1.first_name AS First_name,
+            e1.last_name AS Last_name,
+            d.name AS Department_Name,
+            r.title AS Role_Title,
+            r.salary AS Role_Salary,
+            e2.first_name AS Manager_First_Name,
+            e2.last_name AS Manager_Last_Name
+            FROM employee e1
+            JOIN role r ON e1.role_id = r.id
+            JOIN department d ON r.department_id = d.id
+            LEFT JOIN employee e2 ON e1.manager_id = e2.id                
+            WHERE e1.id = (SELECT MAX(e1.id) FROM employee e1);
+            `
+            const showNewEmployee = await db.promise().query(showNewEmployeeSQL);
+            console.table (showNewEmployee[0]);
+
             // console.log("Role calling MainMenu")
             launch();    
 
@@ -392,7 +437,19 @@ const updateEmployee = async () => {
     console.log(`\x1b[35m  └─────────────────┘\x1b[0m`)    
 
     try{
+        // Extract Role table and store in arrayRole (for use in inquirer choices)
+        const responseRoleUPdate = await db.promise().query(`SELECT id as value, title AS name FROM role;`)                                               // Pull fresh extract of Roles
+            arrayRoleUpdate = responseRoleUPdate[0]                                                                                                             // set arrayRole to equal reponse index value zero
+            arrayRoleUpdate.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Role for this Employee'})   // add options to return to main menu and create department options
+            // console.log("Array Role")
+            // console.log(arrayRole)
 
+        // Extract employee table and store in arrayManager (for use in inquirer choices)
+        const responseManagerUpdate = await db.promise().query(`SELECT id as value, CONCAT(last_name,", ", first_name) as name FROM employee;`)           // Pull fresh extract of employee
+            arrayManagerUpdate = responseManagerUpdate[0]                                                                                                       // set arrayManager to equal reponse index value zero
+            arrayManagerUpdate.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})                                                           // add option to return to main menu option
+            // console.log("Array Manager")
+            // console.log(arrayManager)
 
 
     } catch (err) {
@@ -403,6 +460,4 @@ const updateEmployee = async () => {
 //- Call function to the end user -//
 //---------------------------------//
 launch()
-// departmentChoices()
-// console.log ("Returned")
-// console.log(deptChoice)
+
