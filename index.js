@@ -204,8 +204,8 @@ const addRole = async () => {
     console.log(`\x1b[35m  └──────────────┘\x1b[0m`);   
     // Create department constant
     try {
-        const response = await db.promise().query(`SELECT * FROM department;`)                    // Pull fresh extract of department
-            arrayDept = response[0]                                                                                   // set ArrayDept to equal reponse index value zero
+        const allDepartmentQuery = await db.promise().query(`SELECT * FROM department;`)                    // Pull fresh extract of department
+            const arrayDept = allDepartmentQuery[0]                                                                                   // set ArrayDept to equal reponse index value zero
             arrayDept.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Department for this Role'})       // return to main menu and create department options
             // console.log("Array Dept")
             // console.log(arrayDept)
@@ -262,7 +262,7 @@ const addRole = async () => {
             console.log(`\x1b[33m\n   ⭐ New Role "${answers.title}" added successfully ⭐\x1b[0m \n`)
         
             //Log freshly created role for user to see - utilising maximum ID value on role table (Max = newest)
-        let showNewRoleQuery = `
+        let showNewRoleSQL = `
         SELECT 
         r.id AS Role_ID,
         r.title AS Role_Title,
@@ -272,8 +272,8 @@ const addRole = async () => {
         JOIN department d ON r.department_id = d.id
         WHERE r.id = (SELECT MAX(r.id) FROM role r);
         `
-        const showNewRole = await db.promise().query(showNewRoleQuery);        
-        console.table (showNewRole[0])
+        const showNewRoleQuery = await db.promise().query(showNewRoleSQL);        
+        console.table (showNewRoleQuery[0])
 
             // console.log("Role calling MainMenu")
         if (addRoleCalledByAddEmployee === 1) {
@@ -305,8 +305,8 @@ const addEmployee = async () => {
     console.log(`\x1b[35m  └──────────────────┘\x1b[0m`);    
     try{
         // Extract Role table and store in arrayRole (for use in inquirer choices)
-        const responseRole = await db.promise().query(`SELECT id as value, title AS name FROM role;`)                                               // Pull fresh extract of Roles
-            arrayRole = responseRole[0]                                                                                                             // set arrayRole to equal reponse index value zero
+        const responseRoleQuery = await db.promise().query(`SELECT id as value, title AS name FROM role;`)                                               // Pull fresh extract of Roles
+            const arrayRole = responseRoleQuery[0]                                                                                                             // set arrayRole to equal reponse index value zero
             arrayRole.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Role for this Employee'})   // add options to return to main menu and create department options
             // console.log("Array Role")
             // console.log(arrayRole)
@@ -437,20 +437,45 @@ const updateEmployee = async () => {
     console.log(`\x1b[35m  └─────────────────┘\x1b[0m`)    
 
     try{
-        // Extract Role table and store in arrayRole (for use in inquirer choices)
-        const responseRoleUPdate = await db.promise().query(`SELECT id as value, title AS name FROM role;`)                                               // Pull fresh extract of Roles
-            arrayRoleUpdate = responseRoleUPdate[0]                                                                                                             // set arrayRole to equal reponse index value zero
-            arrayRoleUpdate.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Role for this Employee'})   // add options to return to main menu and create department options
+        // Extract all employees and store in const - for user to view employee details
+        const allEmployeesSQL = `
+        SELECT 
+        e1.id as Employee_ID,
+        CONCAT(e1.last_name,", ",e1.first_name) as Name,
+        d.name AS Department,
+        r.title AS Role,
+        CONCAT(e2.last_name,", ",e2.first_name) as Manager
+        FROM employee e1
+        JOIN role r ON e1.role_id = r.id
+        JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee e2 ON e1.manager_id = e2.id;
+        `
+        const allEmployeesQuery = await db.promise().query(allEmployeesSQL)                                               // Pull extract of all employeesRoles
+            const allEmployees = allEmployeesQuery[0]     
+                                                                                                       // set arrayRole to equal reponse index value zero
+            console.table (allEmployees)
+
+
+
+        const allIDNameSQL = `
+            SELECT 
+        CONCAT("Employee ID: ", e1.id,": ",e1.last_name,", ",e1.first_name) as Employee
+        FROM employee e1
+        JOIN role r ON e1.role_id = r.id
+        JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee e2 ON e1.manager_id = e2.id;
+        `
+            // arrayRoleUpdate.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Role for this Employee'})   // add options to return to main menu and create department options
             // console.log("Array Role")
             // console.log(arrayRole)
-
+            launch()
         // Extract employee table and store in arrayManager (for use in inquirer choices)
-        const responseManagerUpdate = await db.promise().query(`SELECT id as value, CONCAT(last_name,", ", first_name) as name FROM employee;`)           // Pull fresh extract of employee
-            arrayManagerUpdate = responseManagerUpdate[0]                                                                                                       // set arrayManager to equal reponse index value zero
-            arrayManagerUpdate.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})                                                           // add option to return to main menu option
-            // console.log("Array Manager")
-            // console.log(arrayManager)
-
+        // const responseManagerUpdate = await db.promise().query(`SELECT id as value, CONCAT(last_name,", ", first_name) as name FROM employee;`)           // Pull fresh extract of employee
+        //     arrayManagerUpdate = responseManagerUpdate[0]                                                                                                       // set arrayManager to equal reponse index value zero
+        //     arrayManagerUpdate.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})                                                           // add option to return to main menu option
+        //     // console.log("Array Manager")
+        //     // console.log(arrayManager)
+        
 
     } catch (err) {
         console.log(err);        
