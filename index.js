@@ -128,13 +128,47 @@ function launch() {
 
 const viewDepartments = async () => {
     try{
-        const response = await db.promise().query('SELECT * FROM department')
+        const typeofViewDept = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'typeOfView',
+                message: 'What type of Department View would you like?',
+                choices: [
+                    {name: 'Summary of Departments', value: 0},
+                    {name: 'Detailed record of Departments', value: 1}
+                ]
+            }
+        ])
+
+        if (typeofViewDept.typeOfView === 0) {
+            const response = await db.promise().query(`SELECT * FROM department;`)
             console.log("");
-            console.log(`\x1b[35m  ┌──────────────────────┐\x1b[0m`);
-            console.log(`\x1b[35m  │ View all Departments │\x1b[0m`);
-            console.log(`\x1b[35m  └──────────────────────┘\x1b[0m`); 
+            console.log(`\x1b[35m  ┌────────────────────────────────────┐\x1b[0m`);
+            console.log(`\x1b[35m  │ Viewing Summary of all Departments │\x1b[0m`);
+            console.log(`\x1b[35m  └────────────────────────────────────┘\x1b[0m`); 
             console.table(response[0])
-            launch();
+        } else {
+            viewAllDeptSQL = `
+            SELECT 
+            d.id as Department_ID,
+            d.name AS Department,r.title AS Role,
+            r.salary AS Salary,
+            CONCAT(e.last_name,", ",e.first_name) as Employee,
+            CONCAT(m.last_name,", ",m.first_name) as Manager
+            FROM department d
+            LEFT JOIN role r ON d.id = r.department_id
+            LEFT JOIN employee e ON r.id = e.role_id
+            LEFT JOIN employee m ON e.manager_id = m.id;
+            `
+            const response = await db.promise().query(viewAllDeptSQL)
+            console.log("");
+            console.log(`\x1b[35m  ┌────────────────────────────────────────────┐\x1b[0m`);
+            console.log(`\x1b[35m  │ Viewing Detailed record of all Departments │\x1b[0m`);
+            console.log(`\x1b[35m  └────────────────────────────────────────────┘\x1b[0m`); 
+            console.table(response[0])
+        }
+        
+        launch();        
     }
     catch (err) {
         console.log(err)
@@ -755,9 +789,9 @@ const viewTotalSalaryDept = async () => {
     console.log(`\x1b[35m  └─────────────────────────────────────────┘\x1b[0m`);    
 
     try{
-        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);           // Pull fresh extract of employee  (requestRoleInquirerSQL is global const)          
-        let departmentInquirer = requestDepartmentInquirer[0];                                 // Role array "roleInquirer" created           
-        departmentInquirer.unshift({value: 'all', name: ' \x1b[31m∑\x1b[0m  Show summary for all Departments'})   // add options to return to main menu and create department options
+        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);               // Pull fresh extract of department
+        let departmentInquirer = requestDepartmentInquirer[0];                                                   // Department array 
+        departmentInquirer.unshift({value: 'all', name: ' \x1b[31m∑\x1b[0m  Show summary for all Departments'})   // add options to Summarise Salary total for all departments
         //Inquirer prompt
         const deptWhich = await inquirer.prompt ([
             {
@@ -768,8 +802,7 @@ const viewTotalSalaryDept = async () => {
                 choices: departmentInquirer
             },
         ]);
-        console.log  (deptWhich.dept)
-        // Do you want to do a gropby sum function?
+        // console.log  (deptWhich.dept)        
         if (deptWhich.dept === 'all') {
             requestDeptSalarySQL =
             `
@@ -808,8 +841,6 @@ const viewTotalSalaryDept = async () => {
     };
 };
 
-
-
 //--------------------------------//
 //- Function - Delete Department -//
 //--------------------------------//
@@ -821,10 +852,53 @@ const deleteDepartment = async () => {
     console.log(`\x1b[35m  └───────────────────┘\x1b[0m`);    
 
     try{
+        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);               // Pull fresh extract of department
+        let departmentInquirer = requestDepartmentInquirer[0];                                                   // Department array 
+        
+        //Inquirer prompt
+        const deptWhich = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'dept',
+                pageSize: 12,
+                message: "Select the DEPARTMENT you'd like to view total SALARY in:",
+                choices: departmentInquirer
+            },
+        ]);
+        
+        //Show user the record being deleted
+        const deleteDeptSelected = await db.promise().query("SELECT id as Department_ID, name as Department_Name FROM department WHERE id = ?", deptWhich.dept);
+        console.table (deleteDeptSelected[0])
+        // console.log (deleteDeptSelected[0][0].Department_Name)
 
+        //Are you sure
+        const areYouSure = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'sure',
+                pageSize: 12,
+                message: "Are you sure you want to delete this department? This cannot be reversed",
+                choices: [
+                    {name: 'Yes', value: 1},
+                    {name: 'No, please cancel this request', value: 0}
+                ]
+            },
+        ]);
 
+        if (areYouSure.sure === 1) {
+            console.log(`\x1b[33m\n   ⭐ "${deleteDeptSelected[0][0].Department_Name}" deleted successfully! ⭐\x1b[0m \n`);
+            const deleteDeptSQL =
+            `
+            DELETE FROM department
+            where id = ?
+            ` 
+            const deleteDept = await db.promise().query(deleteDeptSQL,deptWhich.dept);
+           
+            launch();
+        } else {
+            launch();
+        }
 
-        launch();
     }
     catch (err) {
         console.log(err);        
