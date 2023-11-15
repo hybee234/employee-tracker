@@ -20,23 +20,23 @@ let viewEmpCalledByUpdateEmp = 0;           // indicator to determine if viewEmp
 //--------------//
 let requestDeptSalarySQL = "";              // Used by viewTotalSalaryDept to set up SQL to view All department vs One department
 const requestRoleInquirerSQL =              // SQL to pull all Role in an array suitable for inquirer
+
 `
 SELECT 
-CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m",r.title,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m$ ",r.salary,"\x1b[0m\x1b[90m, Dept = \x1b[0m\x1b[32m",d.name,"\x1b[0m") as name,
+CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m",r.title,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m$ ",r.salary,"\x1b[0m") as name,
 r.id as value
 FROM role r
-LEFT JOIN department d ON r.department_id = d.id
 `
+
+
 
 const requestEmployeeInquirerSQL =          // SQL to pull all Role in an array suitable for inquirer
 `
 SELECT 
-CONCAT("● \x1b[90m ID = \x1b[33m", e1.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",e1.last_name,"\x1b[0m\x1b[90m, \x1b[0m\x1b[32m",e1.first_name,"\x1b[0m") as name,
-e1.id as value
-FROM employee e1
-LEFT JOIN role r ON e1.role_id = r.id
-LEFT JOIN department d ON r.department_id = d.id
-LEFT JOIN employee e2 ON e1.manager_id = e2.id;
+CONCAT("● \x1b[90m ID = \x1b[33m", e.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",e.last_name,"\x1b[0m\x1b[90m, \x1b[0m\x1b[32m",e.first_name,"\x1b[0m") as name,
+e.id as value
+FROM employee e
+
 `
 
 const requestDepartmentInquirerSQL =          // SQL to pull all Department in an array suitable for inquirer
@@ -47,8 +47,6 @@ d.id as value
 FROM department d
 
 `
-
-
 //---------------------------//
 //- Prompts to the end user -//
 //---------------------------//
@@ -183,13 +181,12 @@ const viewRoles = async () => {
     try{
         const roleSQL = `
         SELECT 
+        r.id AS Role_ID,
         d.name AS Department_Name,
         r.title AS Role_Title,
-        r.salary AS Role_Salary,
-        r.id AS Role_ID
+        r.salary AS Role_Salary        
         FROM role r
-        LEFT JOIN department d ON r.department_id = d.id
-        ORDER BY d.name, r.salary DESC;
+        LEFT JOIN department d ON r.department_id = d.id;
         `
         const response = await db.promise().query(roleSQL)
             console.log("");
@@ -861,12 +858,12 @@ const deleteDepartment = async () => {
                 type: 'list',
                 name: 'dept',
                 pageSize: 12,
-                message: "Select the DEPARTMENT you'd like to view total SALARY in:",
+                message: "Select the DEPARTMENT you'd like to DELETE:",
                 choices: departmentInquirer
             },
         ]);
         
-        //Show user the record being deleted
+        //Show user the record being targeted for deletion
         const deleteDeptSelected = await db.promise().query("SELECT id as Department_ID, name as Department_Name FROM department WHERE id = ?", deptWhich.dept);
         console.table (deleteDeptSelected[0])
         // console.log (deleteDeptSelected[0][0].Department_Name)
@@ -877,10 +874,10 @@ const deleteDepartment = async () => {
                 type: 'list',
                 name: 'sure',
                 pageSize: 12,
-                message: "Are you sure you want to delete this department? This cannot be reversed",
+                message: "Are you sure you want to delete this DEPARTMENT? This cannot be reversed!",
                 choices: [
-                    {name: 'Yes', value: 1},
-                    {name: 'No, please cancel this request', value: 0}
+                    {name: 'Yes, please proceed', value: 1},
+                    {name: 'No, cancel this request', value: 0}
                 ]
             },
         ]);
@@ -917,10 +914,64 @@ const deleteRole = async () => {
     console.log(`\x1b[35m  └─────────────┘\x1b[0m`);    
 
     try{
+        //Show user the list of roles available?
 
+        //Pull values in for array
+        const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);               // Pull fresh extract of department
+        let roleInquirer = requestRoleInquirer[0];                                                   // Role array 
+        
+        //Inquirer prompt
+        const roleWhich = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'role',
+                pageSize: 12,
+                message: "Select the ROLE you'd like to DELETE:",
+                choices: roleInquirer
+            },
+        ]);
+        
+        //Show user the record being targetted for deletion
+        const deleteRoleSelectedSQL =
+        ` 
+        SELECT 
+        r.id as Role_ID,
+        r.title as Title,
+        r.salary as Salary,
+        d.name as Department
+        FROM role r
+        LEFT JOIN department d ON r.department_id = d.id
+        where r.id = ?;
+        `
+        const deleteRoleSelected = await db.promise().query(deleteRoleSelectedSQL, roleWhich.role);
+        console.table (deleteRoleSelected[0])
 
+        //Are you sure
+        const areYouSure = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'sure',
+                pageSize: 12,
+                message: "Are you sure you want to delete this ROLE? This cannot be reversed!",
+                choices: [
+                    {name: 'Yes, please proceed', value: 1},
+                    {name: 'No, cancel this request', value: 0}
+                ]
+            }
+        ]);
 
-        launch();
+        if (areYouSure.sure === 1) {
+            console.log(`\x1b[33m\n   ⭐ "${deleteRoleSelected[0][0].Title}" deleted successfully! ⭐\x1b[0m \n`);
+            const deleteRoleSQL =
+            `
+            DELETE FROM role
+            where id = ?
+            ` 
+            await db.promise().query(deleteRoleSQL,roleWhich.role);           
+            launch();
+        } else {
+            launch();
+        };
     }
     catch (err) {
         console.log(err);        
