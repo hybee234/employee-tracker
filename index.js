@@ -17,6 +17,37 @@ let addDeptCalledByAddRole = 0;             // indicator to determine if addDepa
 let addRoleCalledByAddEmployee = 0;         // indicator to determine if addRole function was called by addEmployee
 let viewEmpCalledByUpdateEmp = 0;           // indicator to determine if viewEmployee function was called by updateEmployee
 
+
+const requestRoleInquirerSQL =              // SQL to pull all Role in an array suitable for inquirer
+`
+SELECT 
+CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m",r.title,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m$ ",r.salary,"\x1b[0m\x1b[90m, Dept = \x1b[0m\x1b[32m",d.name,"\x1b[0m") as name,
+r.id as value
+FROM role r
+JOIN department d ON r.department_id = d.id
+`
+
+const requestEmployeeInquirerSQL =          // SQL to pull all Role in an array suitable for inquirer
+`
+SELECT 
+CONCAT("● \x1b[90m ID = \x1b[33m", e1.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",e1.last_name,"\x1b[0m\x1b[90m, \x1b[0m\x1b[32m",e1.first_name,"\x1b[0m") as name,
+e1.id as value
+FROM employee e1
+JOIN role r ON e1.role_id = r.id
+JOIN department d ON r.department_id = d.id
+LEFT JOIN employee e2 ON e1.manager_id = e2.id;
+`
+
+const requestDepartmentInquirerSQL =          // SQL to pull all Department in an array suitable for inquirer
+`
+SELECT 
+CONCAT("● \x1b[90m ID = \x1b[33m", d.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",d.name,"\x1b[0m") as name,
+d.id as value
+FROM department d
+
+`
+
+
 //---------------------------//
 //- Prompts to the end user -//
 //---------------------------//
@@ -31,16 +62,25 @@ function launch() {
 
         .then ((answers) => {
             switch (answers.mainmenu) {
-            //- View all departments -//
+            //- View all Departments -//
                 case "viewDepartments": viewDepartments()
                 break;
-            //- View all roles -//
+            //- View all Roles -//
                 case "viewRoles": viewRoles()
                 break;
-            //- View all employees -//
+            //- View all Employees -//
                 case "viewEmployees": viewEmployees()                   
                 break;
-            //- Add department -//
+            //- View all Employees By Manager -//
+                case "viewEmployeesByManager": viewEmployeesByManager()         // To create            
+                break;
+            //- View all Employees By Department -//
+                case "viewEmployeesByDepartment": viewEmployeesByDepartment()   // To Create                   
+                break;
+            //- View total Salary for Department -//
+                case "viewTotalSalaryDept": viewTotalSalaryDept()               // To Create       
+                break;
+            //- Add Department -//
                 case "addDepartment": addDepartment()                           
                 break;
             //- Add role -//
@@ -51,6 +91,15 @@ function launch() {
                 break;
             //- Update employee -//
                 case "updateEmployee": updateEmployee()
+                break;
+            //- Delete Department -//
+                case "deleteDepartment": deleteDepartment()                     // To Create
+                break;
+            //- Delete Role -//
+                case "deleteRole": deleteRole()                                 // To Create
+                break;
+            //- Delete Employee -//
+                case "deleteEmployee": deleteEmployee()                         // To Create
                 break;
             //- Quit -//
                 case "quit": 
@@ -126,24 +175,7 @@ const viewRoles = async () => {
 
 const viewEmployees = async() => {    
     try{
-        const employeeSQL =
-        // Original SQL where each value is a separte column
-        // `
-        // SELECT 
-        // e1.first_name AS First_name,
-        // e1.last_name AS Last_name,
-        // d.name AS Department_Name,
-        // r.title AS Role_Title,
-        // r.salary AS Role_Salary,
-        // e2.first_name AS Manager_First_Name,
-        // e2.last_name AS Manager_Last_Name
-        // FROM employee e1
-        // JOIN role r ON e1.role_id = r.id
-        // JOIN department d ON r.department_id = d.id
-        // LEFT JOIN employee e2 ON e1.manager_id = e2.id    
-        // ORDER BY e1.last_name, e1.first_name;
-        // `
-        // Updated SQL to concatonate columns
+        const employeeSQL =        
         `
         SELECT 
         e1.id as Employee_ID,
@@ -449,11 +481,6 @@ const addEmployee = async () => {
 //- Function - Update Employee -//
 //-------------------------------//
 
-// id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-// first_name VARCHAR(30) NOT NULL,
-// last_name VARCHAR(30) NOT NULL,
-// role_id INT, - which role
-// manager_id - which employee_id is their manager
 const updateEmployee = async () => {    
     console.log("")
     console.log(`\x1b[35m  ┌────────────────────────────────┐\x1b[0m`);
@@ -464,21 +491,10 @@ const updateEmployee = async () => {
     // Work out which employee the user wants to update and whether they want to update Role or Manager
         // Display current employees for the user to view
         viewEmpCalledByUpdateEmp = 1            // Set flag to indicate view Employes was called by Update Employees (and to return here instead of going back to main menu)                 
-        await viewEmployees();                  // request extract of employees via viewEmployees function
-                
-        // Prepare employee array to feed into inquirer prompt
-        // SQL to create array that feeds into inquirer (name = name and ID, value = employee_ID)
-        const requestEmployeeInquirerSQL = `
-        SELECT 
-        CONCAT("● \x1b[90m ID = \x1b[33m", e1.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",e1.last_name,"\x1b[0m\x1b[90m, \x1b[0m\x1b[32m",e1.first_name,"\x1b[0m") as name,
-        e1.id as value
-        FROM employee e1
-        JOIN role r ON e1.role_id = r.id
-        JOIN department d ON r.department_id = d.id
-        LEFT JOIN employee e2 ON e1.manager_id = e2.id;
-        `
+        await viewEmployees();                  // request extract of employees via viewEmployees function                
+
         // SQL query requested
-        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL)           // Pull fresh extract of employee
+        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL)           // Pull fresh extract of employee (requestEmployeeInquirerSQL is global const)
         // Emplopyee array created
         employeeInquirer = requestEmployeeInquirer[0]                                       // Set array to pull index [0]
 
@@ -510,13 +526,6 @@ const updateEmployee = async () => {
         const reqShowSelectedEmployee = await db.promise().query(showSelectedEmployeeSQL,employeeUpdate.employee);
         console.table (reqShowSelectedEmployee[0]);                                                                     // this is the selected employee_ID
 
-        // console.log (reqShowSelectedEmployee[0])
-        // console.log (`Employee_ID = ${reqShowSelectedEmployee[0][0].Employee_ID}`)
-        // console.log (`Name = ${reqShowSelectedEmployee[0][0].Name}`)
-        // console.log (`Deparment = ${reqShowSelectedEmployee[0][0].Department}`)
-        // console.log (`Role = ${reqShowSelectedEmployee[0][0].Role}`)
-        // console.log (`Manager = ${reqShowSelectedEmployee[0][0].Manager}`)
-
         const employeeUpdateWhat = await inquirer.prompt ([
             {
                 type: 'list',
@@ -535,7 +544,6 @@ const updateEmployee = async () => {
             console.log(`\x1b[35m  ┌─────────────┐\x1b[0m`);
             console.log(`\x1b[35m  │ Update Role │\x1b[0m`);
             console.log(`\x1b[35m  └─────────────┘\x1b[0m`);   
-
         
             // Show user the Roles avaialable
             const requestRoleSQL = `
@@ -552,39 +560,33 @@ const updateEmployee = async () => {
             roleArray = requestRole[0]                                               // Set array to pull index [0]
             console.table(roleArray)                    // Show role table to user
 
-            // Create Role Array for Inquirer (Not name and value columns)            
-            const requestRoleInquirerSQL = `
-            SELECT 
-            CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m",r.title,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m$ ",r.salary,"\x1b[0m\x1b[90m, Dept = \x1b[0m\x1b[32m",d.name,"\x1b[0m") as name,
-            r.id as value
-            FROM role r
-            JOIN department d ON r.department_id = d.id
-            `
             // SQL query requested
-            const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL)           // Pull fresh extract of employee            
-            let roleInquirer = requestRoleInquirer[0]                                 // Role array "roleInquirer" created           
+            const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);           // Pull fresh extract of employee  (requestRoleInquirerSQL is global const)          
+            let roleInquirer = requestRoleInquirer[0];                                 // Role array "roleInquirer" created           
+            //Inquirer prompt
             const roleWhich = await inquirer.prompt ([
                 {
                     type: 'list',
                     name: 'role',
                     pageSize: 12,
-                    message: "Select the NEW ROLE:",
+                    message: "Select the NEW ROLE for the employee:",
                     choices: roleInquirer
                 },
-            ])
+            ]);
 
-            // console.log (roleWhich.role)
+            // Update the record
             const updateRoleSQL = 
             `
             UPDATE employee
             SET role_id = ?
             WHERE id = ?;
             `
-            await db.promise().query(updateRoleSQL, [roleWhich.role, reqShowSelectedEmployee[0][0].Employee_ID])  
-            console.log(`\x1b[33m\n   ⭐ Role updated successfully! ⭐\x1b[0m \n`) 
-        }
+            await db.promise().query(updateRoleSQL, [roleWhich.role, reqShowSelectedEmployee[0][0].Employee_ID]);
+            console.log(`\x1b[33m\n   ⭐ Role updated successfully! ⭐\x1b[0m \n`);
+            
+        };
         if (employeeUpdateWhat.updateWhat === "manager") {
-            console.log("")
+            console.log("");
             console.log(`\x1b[35m  ┌────────────────┐\x1b[0m`);
             console.log(`\x1b[35m  │ Update Manager │\x1b[0m`);
             console.log(`\x1b[35m  └────────────────┘\x1b[0m`);   
@@ -593,10 +595,10 @@ const updateEmployee = async () => {
                     type: 'list',
                     name: 'manager',
                     pageSize: 12,
-                    message: "Select the NEW MANAGER:",
+                    message: "Select the NEW MANAGER for the employee:",
                     choices: employeeInquirer
                 },
-            ])
+            ]);
             // console.log (managerWhich.manager)                                          // This is the employee_id to update into manager_ID column
             
             // Update the employee record to the selected manager
@@ -606,8 +608,8 @@ const updateEmployee = async () => {
             SET manager_id = ?
             WHERE id = ?;
             `
-            await db.promise().query(updateManagerSQL, [managerWhich.manager, reqShowSelectedEmployee[0][0].Employee_ID] )  
-            console.log(`\x1b[33m\n   ⭐ Manager updated successfully! ⭐\x1b[0m \n`) 
+            await db.promise().query(updateManagerSQL, [managerWhich.manager, reqShowSelectedEmployee[0][0].Employee_ID] ); 
+            console.log(`\x1b[33m\n   ⭐ Manager updated successfully! ⭐\x1b[0m \n`);
         };
         
         // Show updated record to user
@@ -628,15 +630,217 @@ const updateEmployee = async () => {
         const reqShowUpdatedRecord = await db.promise().query(showSelectedEmployeeAfterUpdateSQL,employeeUpdate.employee);
         console.table (reqShowUpdatedRecord[0]); 
 
-        launch()
-
-
+        launch();
     } catch (err) {
         console.log(err);        
+    };
+};
+
+//--------------------//
+//- BONUS CONTENT !! -//
+//--------------------//
+
+//--------------------------------------------//
+//- Function - View all Employees By Manager -//
+//--------------------------------------------//
+
+const viewEmployeesByManager = async () => {    
+    console.log("")
+    console.log(`\x1b[35m  ┌───────────────────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ View all Emplopees By Manager │\x1b[0m`);
+    console.log(`\x1b[35m  └───────────────────────────────┘\x1b[0m`);    
+
+    try{
+        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL);           // Pull fresh extract of employee  (requestRoleInquirerSQL is global const)          
+        let employeeInquirer = requestEmployeeInquirer[0];                                 // Role array "roleInquirer" created           
+        //Inquirer prompt
+        const managerWhich = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'manager',
+                pageSize: 12,
+                message: "Select the MANAGER you'd like to view Employees under:",
+                choices: employeeInquirer
+            },
+        ]);
+        
+        const viewEmpByManagerSQL =
+        `
+        SELECT 
+        e.id as Manager_Employee_ID,
+        CONCAT(m.last_name,", ",m.first_name) as Manager,
+        CONCAT(e.last_name,", ",e.first_name) as Employee,
+        r.title AS Role,
+        r.salary AS Salary,
+        d.name AS Department
+        FROM employee e
+        JOIN role r ON e.role_id = r.id
+        JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee m ON e.manager_id = m.id
+        WHERE m.id = ?;
+        `
+        const viewEmpByManager = await db.promise().query(viewEmpByManagerSQL,managerWhich.manager);
+        console.table (viewEmpByManager[0]); 
+
+
+
+        launch();
     }
-}
+    catch (err) {
+        console.log(err);        
+    };
+};
+
+
+
+
+
+
+//-----------------------------------------------//
+//- Function - View all Employees By Department -//
+//-----------------------------------------------//
+
+const viewEmployeesByDepartment = async () => {    
+    console.log("");
+    console.log(`\x1b[35m  ┌──────────────────────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ View all Employees By Department │\x1b[0m`);
+    console.log(`\x1b[35m  └──────────────────────────────────┘\x1b[0m`);    
+
+    try{
+        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);           // Pull fresh extract of employee  (requestRoleInquirerSQL is global const)          
+        let departmentInquirer = requestDepartmentInquirer[0];                                 // Role array "roleInquirer" created           
+        //Inquirer prompt
+        const deptWhich = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'dept',
+                pageSize: 12,
+                message: "Select the DEPARTMENT you'd like to view Employees in:",
+                choices: departmentInquirer
+            },
+        ]);
+        
+        const viewEmpByDeptSQL =
+        `
+        SELECT 
+        d.id as Department_ID,
+        d.name AS Department,
+        CONCAT(e.last_name,", ",e.first_name) as Employee,
+        r.title AS Role,
+        r.salary AS Salary,
+        CONCAT(m.last_name,", ",m.first_name) as Manager
+        FROM employee e
+        JOIN role r ON e.role_id = r.id
+        JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee m ON e.manager_id = m.id
+        WHERE d.id = ?
+        `
+        const viewEmpByDept = await db.promise().query(viewEmpByDeptSQL,deptWhich.dept);
+        console.table (viewEmpByDept[0]); 
+
+        launch();
+    }
+    catch (err) {
+        console.log(err);        
+    };
+};
+
+
+
+
+//-----------------------------------------------//
+//- Function - View total Salary for Department -//
+//-----------------------------------------------//
+
+const viewTotalSalaryDept = async () => {    
+    console.log("");
+    console.log(`\x1b[35m  ┌──────────────────────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ View total Salary for Department │\x1b[0m`);
+    console.log(`\x1b[35m  └──────────────────────────────────┘\x1b[0m`);    
+
+    try{
+
+
+
+        launch();
+    }
+    catch (err) {
+        console.log(err);        
+    };
+};
+
+
+
+//--------------------------------//
+//- Function - Delete Department -//
+//--------------------------------//
+
+const deleteDepartment = async () => {    
+    console.log("");
+    console.log(`\x1b[35m  ┌───────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ Delete Department │\x1b[0m`);
+    console.log(`\x1b[35m  └───────────────────┘\x1b[0m`);    
+
+    try{
+
+
+
+        launch();
+    }
+    catch (err) {
+        console.log(err);        
+    };
+};
+
+
+//--------------------------//
+//- Function - Delete Role -//
+//--------------------------//
+
+const deleteRole = async () => {    
+    console.log("");
+    console.log(`\x1b[35m  ┌─────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ Delete Role │\x1b[0m`);
+    console.log(`\x1b[35m  └─────────────┘\x1b[0m`);    
+
+    try{
+
+
+
+        launch();
+    }
+    catch (err) {
+        console.log(err);        
+    };
+};
+
+//------------------------------//
+//- Function - Delete Employee -//
+//------------------------------//
+
+const deleteEmployee = async () => {    
+    console.log("");
+    console.log(`\x1b[35m  ┌─────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ Delete Employee │\x1b[0m`);
+    console.log(`\x1b[35m  └─────────────────┘\x1b[0m`);    
+
+    try{
+
+
+
+        launch();
+    }
+    catch (err) {
+        console.log(err);        
+    };
+};
+
+
+
 //---------------------------------//
 //- Call function to the end user -//
 //---------------------------------//
 launch()
+
+
 
