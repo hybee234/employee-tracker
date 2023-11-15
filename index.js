@@ -11,9 +11,11 @@ const db = require('./lib/connection.js')
 //--------------------//
 //- Global Variables -// 
 //--------------------//
-let addDeptCalledByAddRole = 0;             // indicator to determine if addDepartment function was called by addRole
-let addRoleCalledByAddEmployee = 0;         // indicator to determine if addRole function was called by addEmployee
-let viewEmpCalledByUpdateEmp = 0;           // indicator to determine if viewEmployee function was called by updateEmployee
+let addDeptCalledByFunction = 0;            // indicator to determine if addDepartment function was called by a function (and not main menu)
+let addRoleCalledByFunction = 0;            // indicator to determine if addRole function was called by a function (and not main menu)
+let viewEmpCalledByFunction = 0;            // indicator to determine if viewEmployee function was called by a function (and not main menu)
+let viewRoleCalledByFunction = 0;           // indicator to determine if viewRole function was called by a function (and not main menu)
+let viewDeptCalledByFunction = 0;           // indicator to determine if viewDept function was called by a function (and not main menu)
 
 //--------------//
 //- Global SQL -//
@@ -166,7 +168,12 @@ const viewDepartments = async () => {
             console.table(response[0])
         }
         
-        launch();        
+        if (viewDeptCalledByFunction === 1) {       // if viewDeptartment was called by function then return there
+            viewDeptCalledByFunction = 0                // set flag to zero
+            return                                      // return to function to continue
+        } else {
+            launch();                               // Otherwise it was called by mainmenu - go there 
+        }           
     }
     catch (err) {
         console.log(err)
@@ -194,7 +201,13 @@ const viewRoles = async () => {
             console.log(`\x1b[35m  │ View all Roles │\x1b[0m`);
             console.log(`\x1b[35m  └────────────────┘\x1b[0m`);                  
             console.table(response[0])
-            launch();
+
+            if (viewRoleCalledByFunction === 1) {       // if viewRole was called by function then return there
+                viewRoleCalledByFunction = 0                // set flag to zero
+                return                                      // return to function to continue
+            } else {
+                launch();                               // Otherwise it was called by mainmenu - go there 
+            }    
     }
     catch (err) {
         console.log(err)
@@ -210,16 +223,16 @@ const viewEmployees = async() => {
         const employeeSQL =        
         `
         SELECT 
-        e1.id as Employee_ID,
-        CONCAT(e1.last_name,", ",e1.first_name) as Name,
+        e.id as Employee_ID,
+        CONCAT(e.last_name,", ",e.first_name) as Name,
         d.name AS Department,
         r.title AS Role,
         r.salary AS Salary,
-        CONCAT(e2.last_name,", ",e2.first_name) as Manager
-        FROM employee e1
-        LEFT JOIN role r ON e1.role_id = r.id
+        CONCAT(m.last_name,", ",m.first_name) as Manager
+        FROM employee e
+        LEFT JOIN role r ON e.role_id = r.id
         LEFT JOIN department d ON r.department_id = d.id
-        LEFT JOIN employee e2 ON e1.manager_id = e2.id;
+        LEFT JOIN employee m ON e.manager_id = m.id;
         `
         const response = await db.promise().query(employeeSQL)
             console.log("");   
@@ -228,11 +241,11 @@ const viewEmployees = async() => {
             console.log(`\x1b[35m  └────────────────────┘\x1b[0m`);         
             console.table(response[0])
 
-            if (viewEmpCalledByUpdateEmp === 1) {       // if viewEmployees was called by UpdateEmployee then return there
-                viewEmpCalledByUpdateEmp = 0                // set flag to zero
+            if (viewEmpCalledByFunction === 1) {       // if viewEmployees was called by function then return there
+                viewEmpCalledByFunction = 0                // set flag to zero
                 return                                      // return to function to continue
             } else {
-                launch();                               // if not called by upDate Employee then return to mainMenu.
+                launch();                               // Otherwise it was called by mainmenu - go there 
             }    
     }
     catch (err) {
@@ -263,12 +276,13 @@ const addDepartment = async () => {
                 
         const showNewDept = await db.promise().query('SELECT id as Department_ID, name as Department_Name FROM department WHERE name = ?', answers.newDepartment);        
         console.table (showNewDept[0])
-        if (addDeptCalledByAddRole === 1) {         // Check if addDepartment was called by Add Role - if yes then change addDpetCalledByAddRole to zero and return to add Role 
-            // console.log(`if statement addDeptCalledByAddRole = ${addDeptCalledByAddRole}`)
+        if (addDeptCalledByFunction === 1) {         // Check if addDepartment was called by function - if yes then change addDpetCalledByAddRole to zero and return to add Role 
+            addDeptCalledByFunction = 0
+            // console.log(`if statement addDeptCalledByFunction = ${addDeptCalledByFunction}`)
             return (answers.newDepartment);
         } else {
             // console.log("addDepartment calling MainMenu")
-            // console.log(`else addDeptCalledByAddRole = ${addDeptCalledByAddRole}`)
+            // console.log(`else addDeptCalledByFunction = ${addDeptCalledByFunction}`)
             launch();      // Go back to main menu (call launch())             
         }   
     }catch (err) {
@@ -309,8 +323,8 @@ const addRole = async () => {
         
         if (answer.roleDepartment === 0) {                                      // if user selects 'Create New Department"
             // console.log ("roleDepartment === 0, calling add Department")
-            addDeptCalledByAddRole = 1                                          // Set "addDeptCalledbyAddRole = 1" to indicate YES
-            // console.log(`addDeptCalledByAddRole = ${addDeptCalledByAddRole}`)                             
+            addDeptCalledByFunction = 1                                          // Set "addDeptCalledByFunction = 1" to indicate YES
+            // console.log(`addDeptCalledByFunction = ${addDeptCalledByFunction}`)                             
             roleDept = await addDepartment();                                   // call Add department function
         } else if (answer.roleDepartment === -1) {                              // if users selects "Back to main menu"
             // console.log ("roleDepartment === -1, Back to main menu")
@@ -363,8 +377,8 @@ const addRole = async () => {
         console.table (showNewRoleQuery[0])
 
             // console.log("Role calling MainMenu")
-        if (addRoleCalledByAddEmployee === 1) {
-            addRoleCalledByAddEmployee = 0  // set value to zero
+        if (addRoleCalledByFunction === 1) {
+            addRoleCalledByFunction = 0  // set value to zero
             return (answers.title)  // return the role_title
         } else {
             launch();
@@ -439,7 +453,7 @@ const addEmployee = async () => {
         } else     
         if (employeeRoleID === 0) {                                                                                     // Create new Role for this employee
             // console.log (`employeeRoleID = ${employeeRoleID} - create role`)
-            addRoleCalledByAddEmployee = 1                                                                                  // Flags that addRole was called by addEmployee function (used by addRole() to either return a value or go back to main manui)
+            addRoleCalledByFunction = 1                                                                                  // Flags that addRole was called by addEmployee function (used by addRole() to either return a value or go back to main manui)
             let employeeNewRole = await addRole();                                                                          // Create new Role and return the title of new Role stored as employeeNewRole
                 if (employeeNewRole === -1) {                                                                                       // The returned value is "-1" if the user cancels out of addRole, this if statement is necessary to terminate end the addEmployee functions from continuing to execute any await functions the next time the use attempts to addRole
                     return;
@@ -522,7 +536,7 @@ const updateEmployee = async () => {
     try{
     // Work out which employee the user wants to update and whether they want to update Role or Manager
         // Display current employees for the user to view
-        viewEmpCalledByUpdateEmp = 1            // Set flag to indicate view Employes was called by Update Employees (and to return here instead of going back to main menu)                 
+        viewEmpCalledByFunction = 1            // Set flag to indicate view Employes was called by Update Employees (and to return here instead of going back to main menu)                 
         await viewEmployees();                  // request extract of employees via viewEmployees function                
 
         // SQL query requested
@@ -849,8 +863,13 @@ const deleteDepartment = async () => {
     console.log(`\x1b[35m  └───────────────────┘\x1b[0m`);    
 
     try{
+        viewDeptCalledByFunction = 1   // set flag to 1
+        await viewDepartments()
+        
+        //Create array for inquirer
         const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);               // Pull fresh extract of department
         let departmentInquirer = requestDepartmentInquirer[0];                                                   // Department array 
+        departmentInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})      // Add option of cancel and return to main menu
         
         //Inquirer prompt
         const deptWhich = await inquirer.prompt ([
@@ -863,6 +882,12 @@ const deleteDepartment = async () => {
             },
         ]);
         
+        //  If user selects "Cancel and return to main menu" then call launch() and return
+        if (deptWhich.dept === -1) {                
+            launch()
+            return;
+        }
+
         //Show user the record being targeted for deletion
         const deleteDeptSelected = await db.promise().query("SELECT id as Department_ID, name as Department_Name FROM department WHERE id = ?", deptWhich.dept);
         console.table (deleteDeptSelected[0])
@@ -915,11 +940,13 @@ const deleteRole = async () => {
 
     try{
         //Show user the list of roles available?
-
+        viewRoleCalledByFunction = 1            // Set flag to indicate view Roles was called by a function(and to return here instead of going back to main menu)                 
+        await viewRoles();                  // request extract of roles via viewRoles function            
         //Pull values in for array
-        const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);               // Pull fresh extract of department
+        const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);               // Pull fresh extract of role
         let roleInquirer = requestRoleInquirer[0];                                                   // Role array 
-        
+        roleInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})      // Add option of cancel and return to main menu
+
         //Inquirer prompt
         const roleWhich = await inquirer.prompt ([
             {
@@ -930,7 +957,14 @@ const deleteRole = async () => {
                 choices: roleInquirer
             },
         ]);
+
+        //  If user selects "Cancel and return to main menu" then call launch() and return
+        if (roleWhich.role === -1) {                
+            launch()
+            return;
+        }
         
+
         //Show user the record being targetted for deletion
         const deleteRoleSelectedSQL =
         ` 
@@ -989,10 +1023,77 @@ const deleteEmployee = async () => {
     console.log(`\x1b[35m  └─────────────────┘\x1b[0m`);    
 
     try{
+        //Show user the list of roles available?
+        viewEmpCalledByFunction = 1            // Set flag to indicate view Employes was called by funjction  (and to return here instead of going back to main menu)                 
+        await viewEmployees();                  // request extract of employees via viewEmployees function            
+        //Pull values in for array
+        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL);                       // Pull fresh extract of employees
+        let employeeInquirer = requestEmployeeInquirer[0];                                                          // Employee array 
+        employeeInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})        // Add option of cancel and return to main menu
 
+        //Inquirer prompt
+        const employeeWhich = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'employee',
+                pageSize: 12,
+                message: "Select the EMPLOYEE you'd like to DELETE:",
+                choices: employeeInquirer
+            },
+        ]);
 
+        //  If user selects "Cancel and return to main menu" then call launch() and return
+        if (employeeWhich.employee === -1) {                
+            launch()
+            return;
+        }
+        
 
-        launch();
+        //Show user the record being targetted for deletion
+        const deleteEmployeeelectedSQL =
+        ` 
+        SELECT 
+        e.id as Employee_ID,
+        CONCAT(e.last_name,", ",e.first_name) as Name,
+        d.name AS Department,
+        r.title AS Role,
+        r.salary AS Salary,
+        CONCAT(m.last_name,", ",m.first_name) as Manager
+        FROM employee e
+        LEFT JOIN role r ON e.role_id = r.id
+        LEFT JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee m ON e.manager_id = m.id
+        WHERE e.id = ?;
+        `
+        const deleteEmployeeSelected = await db.promise().query(deleteEmployeeelectedSQL, employeeWhich.employee);
+        console.table (deleteEmployeeSelected[0])
+
+        //Are you sure
+        const areYouSure = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'sure',
+                pageSize: 12,
+                message: "Are you sure you want to delete this ROLE? This cannot be reversed!",
+                choices: [
+                    {name: 'Yes, please proceed', value: 1},
+                    {name: 'No, cancel this request', value: 0}
+                ]
+            }
+        ]);
+
+        if (areYouSure.sure === 1) {
+            console.log(`\x1b[33m\n   ⭐ "${deleteEmployeeSelected[0][0].Name}" deleted successfully! ⭐\x1b[0m \n`);
+            const deleteEmployeeSQL =
+            `
+            DELETE FROM employee
+            where id = ?
+            ` 
+            await db.promise().query(deleteEmployeeSQL,employeeWhich.employee);           
+            launch();
+        } else {
+            launch();
+        };
     }
     catch (err) {
         console.log(err);        
