@@ -468,9 +468,9 @@ const updateEmployee = async () => {
                 
         // Prepare employee array to feed into inquirer prompt
         // SQL to create array that feeds into inquirer (name = name and ID, value = employee_ID)
-        const employeeArraySQL = `
+        const requestEmployeeInquirerSQL = `
         SELECT 
-        CONCAT("Employee ID = ", e1.id,", Name = ",e1.last_name,", ",e1.first_name) as name,
+        CONCAT("● \x1b[90m ID = \x1b[33m", e1.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",e1.last_name,"\x1b[0m\x1b[90m, \x1b[0m\x1b[32m",e1.first_name,"\x1b[0m") as name,
         e1.id as value
         FROM employee e1
         JOIN role r ON e1.role_id = r.id
@@ -478,17 +478,17 @@ const updateEmployee = async () => {
         LEFT JOIN employee e2 ON e1.manager_id = e2.id;
         `
         // SQL query requested
-        const employeeArrayRequest = await db.promise().query(employeeArraySQL)           // Pull fresh extract of employee
+        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL)           // Pull fresh extract of employee
         // Emplopyee array created
-        employeeArray = employeeArrayRequest[0]                                       // Set array to pull index [0]
+        employeeInquirer = requestEmployeeInquirer[0]                                       // Set array to pull index [0]
 
         const employeeUpdate = await inquirer.prompt ([
             {
                 type: 'list',
                 name: 'employee',
                 pageSize: 12,
-                message: "Please select the employee to update",
-                choices: employeeArray
+                message: "Please select the EMPLOYEE to update",
+                choices: employeeInquirer
             },
         ])
 
@@ -537,13 +537,51 @@ const updateEmployee = async () => {
             console.log(`\x1b[35m  └─────────────┘\x1b[0m`);   
 
         
-            // Pull roles (concatonate)
-            // Let user select role
-            // Update Role
+            // Show user the Roles avaialable
+            const requestRoleSQL = `
+            SELECT 
+            r.id as Role_ID,
+            r.title as Title,
+            r.salary as Salary,
+            d.name as Department
+            FROM role r
+            JOIN department d ON r.department_id = d.id
+            `
+            // SQL query requested
+            const requestRole = await db.promise().query(requestRoleSQL)           // Pull fresh extract of role
+            roleArray = requestRole[0]                                               // Set array to pull index [0]
+            console.table(roleArray)                    // Show role table to user
 
+            // Create Role Array for Inquirer (Not name and value columns)            
+            const requestRoleInquirerSQL = `
+            SELECT 
+            CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m",r.title,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m$ ",r.salary,"\x1b[0m\x1b[90m, Dept = \x1b[0m\x1b[32m",d.name,"\x1b[0m") as name,
+            r.id as value
+            FROM role r
+            JOIN department d ON r.department_id = d.id
+            `
+            // SQL query requested
+            const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL)           // Pull fresh extract of employee            
+            let roleInquirer = requestRoleInquirer[0]                                 // Role array "roleInquirer" created           
+            const roleWhich = await inquirer.prompt ([
+                {
+                    type: 'list',
+                    name: 'role',
+                    pageSize: 12,
+                    message: "Select the NEW ROLE:",
+                    choices: roleInquirer
+                },
+            ])
 
-
-
+            // console.log (roleWhich.role)
+            const updateRoleSQL = 
+            `
+            UPDATE employee
+            SET role_id = ?
+            WHERE id = ?;
+            `
+            await db.promise().query(updateRoleSQL, [roleWhich.role, reqShowSelectedEmployee[0][0].Employee_ID])  
+            console.log(`\x1b[33m\n   ⭐ Role updated successfully! ⭐\x1b[0m \n`) 
         }
         if (employeeUpdateWhat.updateWhat === "manager") {
             console.log("")
@@ -555,8 +593,8 @@ const updateEmployee = async () => {
                     type: 'list',
                     name: 'manager',
                     pageSize: 12,
-                    message: "Please select the manager to update to:",
-                    choices: employeeArray
+                    message: "Select the NEW MANAGER:",
+                    choices: employeeInquirer
                 },
             ])
             // console.log (managerWhich.manager)                                          // This is the employee_id to update into manager_ID column
