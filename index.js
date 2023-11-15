@@ -12,10 +12,11 @@ const db = require('./lib/connection.js')
 //- Global Variables -// 
 //--------------------//
 
-let arrayDept;                      // array of departments available (used in creating new role)
-// let roleDept;                  // new Role department value (used in creating new role)
-let addDeptCalledByAddRole = 0;     // indicator to determine if addDepartment function was called by addRole
-let addRoleCalledByAddEmployee = 0; // indicator to determine if addRole function was called by addEmployee
+// let arrayDept;                              // array of departments available (used in creating new role)
+// let roleDept;                            // new Role department value (used in creating new role)
+let addDeptCalledByAddRole = 0;             // indicator to determine if addDepartment function was called by addRole
+let addRoleCalledByAddEmployee = 0;         // indicator to determine if addRole function was called by addEmployee
+let viewEmpCalledByUpdateEmp = 0;           // indicator to determine if viewEmployee function was called by updateEmployee
 
 //---------------------------//
 //- Prompts to the end user -//
@@ -101,7 +102,8 @@ const viewRoles = async () => {
         SELECT 
         d.name AS Department_Name,
         r.title AS Role_Title,
-        r.salary AS Role_Salary
+        r.salary AS Role_Salary,
+        r.id AS Role_ID
         FROM role r
         JOIN department d ON r.department_id = d.id
         ORDER BY d.name, r.salary DESC;
@@ -125,20 +127,35 @@ const viewRoles = async () => {
 
 const viewEmployees = async() => {    
     try{
-        const employeeSQL =`
+        const employeeSQL =
+        // Original SQL where each value is a separte column
+        // `
+        // SELECT 
+        // e1.first_name AS First_name,
+        // e1.last_name AS Last_name,
+        // d.name AS Department_Name,
+        // r.title AS Role_Title,
+        // r.salary AS Role_Salary,
+        // e2.first_name AS Manager_First_Name,
+        // e2.last_name AS Manager_Last_Name
+        // FROM employee e1
+        // JOIN role r ON e1.role_id = r.id
+        // JOIN department d ON r.department_id = d.id
+        // LEFT JOIN employee e2 ON e1.manager_id = e2.id    
+        // ORDER BY e1.last_name, e1.first_name;
+        // `
+        // Updated SQL to concatonate columns
+        `
         SELECT 
-        e1.first_name AS First_name,
-        e1.last_name AS Last_name,
-        d.name AS Department_Name,
-        r.title AS Role_Title,
-        r.salary AS Role_Salary,
-        e2.first_name AS Manager_First_Name,
-        e2.last_name AS Manager_Last_Name
+        e1.id as Employee_ID,
+        CONCAT(e1.last_name,", ",e1.first_name) as Name,
+        d.name AS Department,
+        r.title AS Role,
+        CONCAT(e2.last_name,", ",e2.first_name) as Manager
         FROM employee e1
         JOIN role r ON e1.role_id = r.id
         JOIN department d ON r.department_id = d.id
-        LEFT JOIN employee e2 ON e1.manager_id = e2.id    
-        ORDER BY e1.last_name, e1.first_name;
+        LEFT JOIN employee e2 ON e1.manager_id = e2.id;
         `
         const response = await db.promise().query(employeeSQL)
             console.log("");   
@@ -146,7 +163,13 @@ const viewEmployees = async() => {
             console.log(`\x1b[35m  │ View all Employees │\x1b[0m`);
             console.log(`\x1b[35m  └────────────────────┘\x1b[0m`);         
             console.table(response[0])
-            launch();
+
+            if (viewEmpCalledByUpdateEmp === 1) {       // if viewEmployees was called by UpdateEmployee then return there
+                viewEmpCalledByUpdateEmp = 0                // set flag to zero
+                return                                      // return to function to continue
+            } else {
+                launch();                               // if not called by upDate Employee then return to mainMenu.
+            }    
     }
     catch (err) {
         console.log(err)
@@ -278,7 +301,7 @@ const addRole = async () => {
             // console.log("Role calling MainMenu")
         if (addRoleCalledByAddEmployee === 1) {
             addRoleCalledByAddEmployee = 0  // set value to zero
-            return (answers.title)  // return the role_id (TODO)  <--------------- need to pass freshly created role_id back for storage
+            return (answers.title)  // return the role_title
         } else {
             launch();
         }            
@@ -432,13 +455,44 @@ const addEmployee = async () => {
 // manager_id - which employee_id is their manager
 const updateEmployee = async () => {    
     console.log("")
-    console.log(`\x1b[35m  ┌─────────────────┐\x1b[0m`)
-    console.log(`\x1b[35m  │ Update Employee │\x1b[0m`);
-    console.log(`\x1b[35m  └─────────────────┘\x1b[0m`)    
+    console.log(`\x1b[35m  ┌────────────────────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ Update Employee (Role/Manager) │\x1b[0m`);
+    console.log(`\x1b[35m  └────────────────────────────────┘\x1b[0m`);    
 
     try{
-        // Extract all employees and store in const - for user to view employee details
-        const allEmployeesSQL = `
+    // Work out which employee the user wants to update and whether they want to update Role or Manager
+        // Display current employees for the user to view
+        viewEmpCalledByUpdateEmp = 1            // Set flag to indicate view Employes was called by Update Employees (and to return here instead of going back to main menu)                 
+        await viewEmployees();                  // request extract of employees via viewEmployees function
+                
+        // Prepare employee array to feed into inquirer prompt
+        // SQL to create array that feeds into inquirer (name = name and ID, value = employee_ID)
+        const employeeArraySQL = `
+        SELECT 
+        CONCAT("Employee ID = ", e1.id,", Name = ",e1.last_name,", ",e1.first_name) as name,
+        e1.id as value
+        FROM employee e1
+        JOIN role r ON e1.role_id = r.id
+        JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee e2 ON e1.manager_id = e2.id;
+        `
+        // SQL query requested
+        const employeeArrayRequest = await db.promise().query(employeeArraySQL)           // Pull fresh extract of employee
+        // Emplopyee array created
+        employeeArray = employeeArrayRequest[0]                                       // Set array to pull index [0]
+
+        const employeeUpdate = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'employee',
+                pageSize: 12,
+                message: "Please select the employee to update",
+                choices: employeeArray
+            },
+        ])
+
+        // Show the user the selected employee 
+        const showSelectedEmployeeSQL =`
         SELECT 
         e1.id as Employee_ID,
         CONCAT(e1.last_name,", ",e1.first_name) as Name,
@@ -448,34 +502,89 @@ const updateEmployee = async () => {
         FROM employee e1
         JOIN role r ON e1.role_id = r.id
         JOIN department d ON r.department_id = d.id
-        LEFT JOIN employee e2 ON e1.manager_id = e2.id;
+        LEFT JOIN employee e2 ON e1.manager_id = e2.id              
+        WHERE e1.id = ?;
         `
-        const allEmployeesQuery = await db.promise().query(allEmployeesSQL)                                               // Pull extract of all employeesRoles
-            const allEmployees = allEmployeesQuery[0]     
-                                                                                                       // set arrayRole to equal reponse index value zero
-            console.table (allEmployees)
+        const reqShowSelectedEmployee = await db.promise().query(showSelectedEmployeeSQL,employeeUpdate.employee);
+        console.table (reqShowSelectedEmployee[0]);                                                                     // this is the selected employee_ID
+
+        // console.log (reqShowSelectedEmployee[0])
+        // console.log (`Employee_ID = ${reqShowSelectedEmployee[0][0].Employee_ID}`)
+        // console.log (`Name = ${reqShowSelectedEmployee[0][0].Name}`)
+        // console.log (`Deparment = ${reqShowSelectedEmployee[0][0].Department}`)
+        // console.log (`Role = ${reqShowSelectedEmployee[0][0].Role}`)
+        // console.log (`Manager = ${reqShowSelectedEmployee[0][0].Manager}`)
+
+        const employeeUpdateWhat = await inquirer.prompt ([
+            {
+                type: 'list',
+                name: 'updateWhat',
+                pageSize: 12,
+                message: "What would you like to update?",
+                choices: [
+                    {name: "Role", value: "role"},
+                    {name: "Manager", value: "manager"}
+                ]
+            }
+        ])
+
+        if (employeeUpdateWhat.updateWhat === "role") {
+            console.log("")
+            console.log(`\x1b[35m  ┌─────────────┐\x1b[0m`);
+            console.log(`\x1b[35m  │ Update Role │\x1b[0m`);
+            console.log(`\x1b[35m  └─────────────┘\x1b[0m`);   
 
 
 
-        const allIDNameSQL = `
+
+        }
+        if (employeeUpdateWhat.updateWhat === "manager") {
+            console.log("")
+            console.log(`\x1b[35m  ┌────────────────┐\x1b[0m`);
+            console.log(`\x1b[35m  │ Update Manager │\x1b[0m`);
+            console.log(`\x1b[35m  └────────────────┘\x1b[0m`);   
+            const managerWhich = await inquirer.prompt ([
+                {
+                    type: 'list',
+                    name: 'manager',
+                    pageSize: 12,
+                    message: "Please select the manager to update to:",
+                    choices: employeeArray
+                },
+            ])
+            // console.log (managerWhich.manager)                                          // This is the employee_id to update into manager_ID column
+            
+            // Update the employee record to the selected manager
+            const updateManagerSQL = 
+            `
+            UPDATE employee
+            SET manager_id = ?
+            WHERE id = ?;
+            `
+            await db.promise().query(updateManagerSQL, [managerWhich.manager, reqShowSelectedEmployee[0][0].Employee_ID] )  
+            console.log(`\x1b[33m\n   ⭐ Manager updated successfully! ⭐\x1b[0m \n`) 
+
+            // Show updated record to user
+            const showSelectedEmployeeSQL =`
             SELECT 
-        CONCAT("Employee ID: ", e1.id,": ",e1.last_name,", ",e1.first_name) as Employee
-        FROM employee e1
-        JOIN role r ON e1.role_id = r.id
-        JOIN department d ON r.department_id = d.id
-        LEFT JOIN employee e2 ON e1.manager_id = e2.id;
-        `
-            // arrayRoleUpdate.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Role for this Employee'})   // add options to return to main menu and create department options
-            // console.log("Array Role")
-            // console.log(arrayRole)
-            launch()
-        // Extract employee table and store in arrayManager (for use in inquirer choices)
-        // const responseManagerUpdate = await db.promise().query(`SELECT id as value, CONCAT(last_name,", ", first_name) as name FROM employee;`)           // Pull fresh extract of employee
-        //     arrayManagerUpdate = responseManagerUpdate[0]                                                                                                       // set arrayManager to equal reponse index value zero
-        //     arrayManagerUpdate.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})                                                           // add option to return to main menu option
-        //     // console.log("Array Manager")
-        //     // console.log(arrayManager)
+            e1.id as Employee_ID,
+            CONCAT(e1.last_name,", ",e1.first_name) as Name,
+            d.name AS Department,
+            r.title AS Role,
+            CONCAT(e2.last_name,", ",e2.first_name) as Manager
+            FROM employee e1
+            JOIN role r ON e1.role_id = r.id
+            JOIN department d ON r.department_id = d.id
+            LEFT JOIN employee e2 ON e1.manager_id = e2.id              
+            WHERE e1.id = ?;
+            `
+            const reqShowUpdatedRecord = await db.promise().query(showSelectedEmployeeSQL,employeeUpdate.employee);
+            console.table (reqShowUpdatedRecord[0]); 
+        };
         
+
+        launch()
+
 
     } catch (err) {
         console.log(err);        
