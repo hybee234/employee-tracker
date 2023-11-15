@@ -693,7 +693,7 @@ const updateEmployee = async () => {
 const viewEmployeesByManager = async () => {    
     console.log("")
     console.log(`\x1b[35m  ┌───────────────────────────────┐\x1b[0m`);
-    console.log(`\x1b[35m  │ View all Emplopees By Manager │\x1b[0m`);
+    console.log(`\x1b[35m  │ View all Employees By Manager │\x1b[0m`);
     console.log(`\x1b[35m  └───────────────────────────────┘\x1b[0m`);    
 
     try{
@@ -713,7 +713,7 @@ const viewEmployeesByManager = async () => {
         const viewEmpByManagerSQL =
         `
         SELECT 
-        e.id as Manager_Employee_ID,
+        m.id as Manager_Employee_ID,
         CONCAT(m.last_name,", ",m.first_name) as Manager,
         CONCAT(e.last_name,", ",e.first_name) as Employee,
         r.title AS Role,
