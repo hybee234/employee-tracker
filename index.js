@@ -12,8 +12,7 @@ const db = require('./lib/connection.js')
 //- Global Variables -// 
 //--------------------//
 
-// let arrayDept;                              // array of departments available (used in creating new role)
-// let roleDept;                            // new Role department value (used in creating new role)
+
 let addDeptCalledByAddRole = 0;             // indicator to determine if addDepartment function was called by addRole
 let addRoleCalledByAddEmployee = 0;         // indicator to determine if addRole function was called by addEmployee
 let viewEmpCalledByUpdateEmp = 0;           // indicator to determine if viewEmployee function was called by updateEmployee
@@ -151,6 +150,7 @@ const viewEmployees = async() => {
         CONCAT(e1.last_name,", ",e1.first_name) as Name,
         d.name AS Department,
         r.title AS Role,
+        r.salary AS Salary,
         CONCAT(e2.last_name,", ",e2.first_name) as Manager
         FROM employee e1
         JOIN role r ON e1.role_id = r.id
@@ -416,11 +416,12 @@ const addEmployee = async () => {
             // Show new employee by MAX employee ID value
             const showNewEmployeeSQL =`
             SELECT 
-            e1.first_name AS First_name,
-            e1.last_name AS Last_name,
-            d.name AS Department_Name,
-            r.title AS Role_Title,
-            r.salary AS Role_Salary,
+            e1.id AS Employee_ID,
+            e1.first_name AS First_Name,
+            e1.last_name AS Last_Name,
+            d.name AS Department,
+            r.title AS Role,
+            r.salary AS Salary,
             e2.first_name AS Manager_First_Name,
             e2.last_name AS Manager_Last_Name
             FROM employee e1
@@ -498,6 +499,7 @@ const updateEmployee = async () => {
         CONCAT(e1.last_name,", ",e1.first_name) as Name,
         d.name AS Department,
         r.title AS Role,
+        r.salary AS Salary,
         CONCAT(e2.last_name,", ",e2.first_name) as Manager
         FROM employee e1
         JOIN role r ON e1.role_id = r.id
@@ -534,6 +536,11 @@ const updateEmployee = async () => {
             console.log(`\x1b[35m  │ Update Role │\x1b[0m`);
             console.log(`\x1b[35m  └─────────────┘\x1b[0m`);   
 
+        
+            // Pull roles (concatonate)
+            // Let user select role
+            // Update Role
+
 
 
 
@@ -563,25 +570,25 @@ const updateEmployee = async () => {
             `
             await db.promise().query(updateManagerSQL, [managerWhich.manager, reqShowSelectedEmployee[0][0].Employee_ID] )  
             console.log(`\x1b[33m\n   ⭐ Manager updated successfully! ⭐\x1b[0m \n`) 
-
-            // Show updated record to user
-            const showSelectedEmployeeSQL =`
-            SELECT 
-            e1.id as Employee_ID,
-            CONCAT(e1.last_name,", ",e1.first_name) as Name,
-            d.name AS Department,
-            r.title AS Role,
-            CONCAT(e2.last_name,", ",e2.first_name) as Manager
-            FROM employee e1
-            JOIN role r ON e1.role_id = r.id
-            JOIN department d ON r.department_id = d.id
-            LEFT JOIN employee e2 ON e1.manager_id = e2.id              
-            WHERE e1.id = ?;
-            `
-            const reqShowUpdatedRecord = await db.promise().query(showSelectedEmployeeSQL,employeeUpdate.employee);
-            console.table (reqShowUpdatedRecord[0]); 
         };
         
+        // Show updated record to user
+        const showSelectedEmployeeAfterUpdateSQL =`
+        SELECT 
+        e1.id as Employee_ID,
+        CONCAT(e1.last_name,", ",e1.first_name) as Name,
+        d.name AS Department,
+        r.title AS Role,
+        r.salary AS Salary,
+        CONCAT(e2.last_name,", ",e2.first_name) as Manager
+        FROM employee e1
+        JOIN role r ON e1.role_id = r.id
+        JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee e2 ON e1.manager_id = e2.id              
+        WHERE e1.id = ?;
+        `
+        const reqShowUpdatedRecord = await db.promise().query(showSelectedEmployeeAfterUpdateSQL,employeeUpdate.employee);
+        console.table (reqShowUpdatedRecord[0]); 
 
         launch()
 
