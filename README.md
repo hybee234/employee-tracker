@@ -123,11 +123,20 @@ Several personal challenges were set in the development of this application:
 
 ## Video and Screenshots <a ID = "video-screenshots"></a>
 
+### Video
+
+Watch this video to learn more about the application
+
+<a href="https://drive.google.com/file/d/1F-TxUnNaoULuqn5DTNpz_jC-25aPx1c2/view"> Video - "How to: Huber's Employee Tracker" </a>
+
+### Screenshots
+
 Screenshot of the application during "Add New Role" and "Add New Employee Process"\
 * Note the headings rendered with colour schemes used
 * Note formatting and use of icons and colours across the application
 
 <div align="center">
+
 
 ![Screenshot of the application in flight](./lib/images/screenshot1.png)
 
