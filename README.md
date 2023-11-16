@@ -221,38 +221,115 @@ Automated Test scripts have not been developed for this application
 * Validate that a purple heading in a box is rendered with text "view all roles"
 * Validate that viewing all roles presents you with a table of all Roles (Role ID, Role, Salary, Department)
 * Validate that Salary is presented formatted as currency
-* Validate that you are returned to main menu
+* Validate that you are returned to main menu after presented with the table
 
 ### View all Employees
-
+* Validate that a purple heading in a box is rendered with text "View all Employees"
+* Validate that viewing all employees presents you with a table of all emlpoyees (Employee_ID, Name, Department, Role, Salary, Manager)
+* Validate that Salary is presented formatted as currency
+* Validate that you are returned to main menu after presented with the table
 
 ### View all Employees by Manager
 
-* Validate that when 
+* Validate that a purple heading in a box is rendered with text "View all Employees by Manager"
+* Validate that you are presented with a list of staff to select from, these options should also be formatted with colour to make it easier to identify employee_ID and name
+* Validate that when you select a staff member from the list, a table is presented with employees who have your chosen employee as their manager 
+* Validate that Salary is presented formatted as currency
+* Validate that you are returned to main menu after presented with the table
 
 ### View all Employees by Department
 
+* Validate that a purple heading in a box is rendered with text "View all Employees by Department"
+* Validate that you are presented with a list of Departments to select from, these options should also be formatted with colour to make it easier to identify Department ID and Department Name
+* Validate that when you select a Department from the list, a table is presented with employees in the department. 
+* Validate that Salary is presented formatted as currency
+* Validate that you are returned to main menu after presented with the table
+
 ### View Total Salary for Department
 
-### Add Department
+* Validate that a purple heading in a box is rendered with text "View Total Salary for Department"
+* Validate that you are presented with a list of Departments to select from, these options should also be formatted with colour to make it easier to identify Department ID and Department Name
+* Validate that there is also a "Show summary for all Departments" option with a red "sigma icon"
+* Validate that selecting a department produces a table with a Salary total for the selected department only
+* Validate that selecting the "Show Summary for all Departments" option produces a table that shows the salary total for ALL departments
+* Validate that Salary is presented formatted as currency (in both tables)
+* Validate that you are returned to main menu after presented with the table
 
+### Add Department
+* Validate that a purple heading in a box is rendered with text "Add New Department"
+* Validate that you are presented with a question for the name of the new department
+* Validate that once you have submitted the new department name, that you are presented with a table showing the Department ID and Department name with a confirmation message of success
+* Validate that you are automatically returned to the main menu after the addition
 
 ### Add Role
+* Validate that a purple heading in a box is rendered with text "Add New Role"
+* Validate that you are presented with a list of departments to select from, the first option is to cancel adding the new role and to return to main menu, the second option is to create a New department followed by all available departments in the database to select from.
+* Validate that the list options are colour formatted to make it easier to see values
+* Validate that select "cancel and return to main menu" brings you to the main menu
+* Validate that selecting "Create New Department" steps you through the process to create a new department - importantly, the user is not returned back to the main menu after adding a new department, the application is expected to continue with the process of adding the new role (utilising the newly created department)
+* Validate that once a department is selected (either through selection or creation) that you are guided through questions to arrive at a new Role (Title, Salary)
+* Validate that Salary has data validation configured (i.e. only numbers can be accepted)
+* Validate that Once the Role is created - that the user is presented with a table displaying the individual role with a message indicating success
+* Validate that you are returned to the main menu once the new Role is added
+* Validate that restarting an add Role process after cancelling out does not produce errors (lingering await functions that have not been address will throw errors when this happens)
 
 ### Add Employee
 
+* Validate that a purple heading in a box is rendered with text "Add New Employee"
+* Validate that you are first prompted for employees first and last name
+
+#### Select Role
+* Validate that you are next presented a list to determine employees Role.
+* Validate that there is a Cancel and Create new role option along with all existing Roles in the database
+* Validate that the Roles list is colour coded to improve readability
+* Validate that selecting Cancel brings you back to the main menu
+* Validate that selecting "Create New ROle for this Employee" steps you through the process to create a new Role - importantly, the user is not returned back to the main menu after creating a new Role, the application is expected to continue with the process of adding the new employee (utilising the newly created role)
+* Validate that once the Role is selected (either by creating a new one or selecting an existing one), that the user is next brought to selecting Manager
+
+#### Select Manager
+* Validate that the user is presented with a list of employees that includes an option to cancel out of the process and return to main menu
+* Validate that cancelling brings the user back to the main menu
+* Validate that selecting a manager progresses to the end of employee creation
+* Validate that a table is presented to the user with details of the newly created employee and a confirmation message of success
+* Validate that that user is returned to the main menu
 
 ### Update Employee (Role/Manager)
+* Validate that when selecting "Update Employee (ROle/Manager) - that a purple heading in a box is rendered with text "Update Employee (Role/Manager)"
+* Validate that the user is automatically presented with a table of existing employees to view
+* Validate that the user is presented with a list of employees to select from
+* Validate that the user is presented with the options to update the Employees Role or Manager
 
+#### Update Role
+* Validate that selecting Role presents the user with all roles on a table, and a formatted list of Roles is made available to pick from
+* Validate that selecting a Role updates the employees Role, a table with the employees record will display together with a message indicating success
+* Validate that that user is returned to the main menu
+
+#### Update Manager
+* Validate that selecting Manager presents the user with all Employees on a table, and a formatted list of Employees is made available to pick from
+* Validate that selecting a Manager updates the employees Manager, a table with the employees record will display together with a message indicating success
+* Validate that that user is returned to the main menu
 
 ### Delete Department
-
+* Validate that when selecting Delete Department, the user is presented the option of a Summary View or Detailed view and that selecting the option displays the corresponding table
+* Validate that when selecting the Department View, that the user is not brought back to the main menu and remains within the process of deleting a department, the user is expected to be presented with a formatted list of Departments to select from with the top option being a cancel option
+* Validate that selecting the cancel option brings the user back to the main menu
+* Validate that when the user selects a department, that a table showing all associated Roles and employees is presented for the user to review, a warning prompt will also display with a final confirmation on whether to proceed with delting the department
+* Validate that selecting No cancels the request and returns the user to the main menu
+* Validate that selecting Yes deletes the Department, displays a message of success and brings the user back to the main menu
 
 ### Delete Role
-
+* Validate that when selecting Delete Role, that the user is presented with a table of all Roles and a formatted list of Roles to select from with the top option being a cancel option
+* Validate that selecting the cancel option brings the user back to the main menu
+* Validate that when the user selects a Role, that a table showing all associated Employees is presented for the user to review, a warning prompt will also display with a final confirmation on whether to proceed with delting the role
+* Validate that selecting No cancels the request and returns the user to the main menu
+* Validate that selecting Yes deletes the Role, displays a message of success and brings the user back to the main menu
 
 ### Delete Employee
-
+* Validate that when selecting Delete Employee, that the user is presented with a table of all Employees and a formatted list of RoEmployees to select from with the top option being a cancel option
+* Validate that selecting the cancel option brings the user back to the main menu
+* Validate that when the user selects an Employee, that a table showing the Employees record is presented for the user to review, a warning prompt will also display with a final confirmation on whether to proceed with delting the employee
+* Validate that selecting No cancels the request and returns the user to the main menu
+* Validate that selecting Yes deletes the Employee, displays a message of success and brings the user back to the main menu
 
 ### Quit
 * Validate that selecting quit terminates the application with a pleasant message saying "Thanks for dropping by!"
