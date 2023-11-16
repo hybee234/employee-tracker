@@ -779,9 +779,9 @@ const viewEmployeesByDepartment = async () => {
 
 const viewTotalSalaryDept = async () => {    
     console.log("");
-    console.log(`\x1b[35m  ┌─────────────────────────────────────────┐\x1b[0m`);
-    console.log(`\x1b[35m  │ View Total Salary Budget for Department │\x1b[0m`);
-    console.log(`\x1b[35m  └─────────────────────────────────────────┘\x1b[0m`);    
+    console.log(`\x1b[35m  ┌──────────────────────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ View Total Salary for Department │\x1b[0m`);
+    console.log(`\x1b[35m  └──────────────────────────────────┘\x1b[0m`);    
 
     try{
         // Prepare Department Array for Inquirer
@@ -910,7 +910,7 @@ const deleteDepartment = async () => {
 
         // Respond to user selection (Are you sure?)
         if (areYouSure.sure === 1) {            // Yes = Delete and return to main menu
-            console.log(`\x1b[33m\n   ⭐ "${deleteDeptSelected[0][0].Department_Name}" deleted successfully! ⭐\x1b[0m \n`);
+            console.log(`\x1b[33m\n   ⭐ "${deleteDeptSelected[0][0].Department}" deleted successfully! ⭐\x1b[0m \n`);
             const deleteDeptSQL =
             `
             DELETE FROM department
@@ -1001,7 +1001,7 @@ const deleteRole = async () => {
 
         // Respond to user selection (Are you Sure?)
         if (areYouSure.sure === 1) {    // Yes = Delete and return to main menu
-            console.log(`\x1b[33m\n   ⭐ "${deleteRoleSelected[0][0].Title}" deleted successfully! ⭐\x1b[0m \n`);
+            console.log(`\x1b[33m\n   ⭐ "${deleteRoleSelected[0][0].Role}" deleted successfully! ⭐\x1b[0m \n`);
             const deleteRoleSQL =
             `
             DELETE FROM role
