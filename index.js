@@ -103,9 +103,9 @@ function launch() {
             //- Quit -//
                 case "quit": 
                     console.log("");
-                    console.log(`\x1b[31m  ┌─────────────────────────┐\x1b[0m`);
-                    console.log(`\x1b[31m  │ Thanks for dropping by! │\x1b[0m`);
-                    console.log(`\x1b[31m  └─────────────────────────┘\x1b[0m`);
+                    console.log(`\x1b[31m  ┌────────────────────────────────────────────────┐\x1b[0m`);
+                    console.log(`\x1b[31m  │ Thank you for using Huber's Employee Tracker!  │\x1b[0m`);
+                    console.log(`\x1b[31m  └────────────────────────────────────────────────┘\x1b[0m`);
                     process.exit()                
             //- Default -//
                 default:

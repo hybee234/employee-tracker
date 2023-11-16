@@ -2,7 +2,7 @@
 
 <div align="center">
 
-# Hubers Employee Tracker
+# Huber's Employee Tracker
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Badge](https://img.shields.io/badge/Node.js-393?logo=nodedotjs&logoColor=fff&style=flat)](https://nodejs.org/en)
@@ -31,7 +31,7 @@ This application has been developed from scratch
 - <a href="#user-acceptance-criteria">User Acceptance Criteria</a>
 - [Installation](#installation)
 - [Usage](#usage)
-- <a href="#screenshots">Video and Screenshots</a>
+- <a href="#video-screenshots">Video and Screenshots</a>
 - [License](#license)
 - [Contributing](#contributing)
 - [Testing](#testing)
@@ -121,13 +121,22 @@ Several personal challenges were set in the development of this application:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Screenshots <a ID = "screenshots"></a>
+## Video and Screenshots <a ID = "video-screenshots"></a>
+
+### Video
+
+Watch this video to learn more about the application
+
+<a href="https://drive.google.com/file/d/1F-TxUnNaoULuqn5DTNpz_jC-25aPx1c2/view"> Video - "How to: Huber's Employee Tracker" </a>
+
+### Screenshots
 
 Screenshot of the application during "Add New Role" and "Add New Employee Process"\
 * Note the headings rendered with colour schemes used
 * Note formatting and use of icons and colours across the application
 
 <div align="center">
+
 
 ![Screenshot of the application in flight](./lib/images/screenshot1.png)
 
