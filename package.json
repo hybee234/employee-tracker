@@ -8,8 +8,7 @@
   },
   "author": "hybee234",
   "license": "ISC",
-  "dependencies": {
-    "express": "^4.18.2",
+  "dependencies": {    
     "inquirer": "^8.2.4",
     "mysql2": "^3.6.3",
     "dotenv": "^8.2.0"
