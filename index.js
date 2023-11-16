@@ -25,7 +25,7 @@ const requestRoleInquirerSQL =              // SQL to pull all Role in an array 
 
 `
 SELECT 
-CONCAT("● \x1b[90m Role ID = \x1b[33m", r.id ,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m", r.title ,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m", CONCAT("$",FORMAT(r.salary ,"C")),"\x1b[0m") as name,
+CONCAT("  ● \x1b[90m Role ID = \x1b[33m", r.id ,"\x1b[0m\x1b[90m, Role = \x1b[0m\x1b[32m", r.title ,"\x1b[0m\x1b[90m, Salary = \x1b[0m\x1b[36m", CONCAT("$",FORMAT(r.salary ,"C")),"\x1b[0m") as name,
 r.id as value
 FROM role r
 `
@@ -33,7 +33,7 @@ FROM role r
 const requestEmployeeInquirerSQL =          // SQL to pull all Role in an array suitable for inquirer
 `
 SELECT 
-CONCAT("● \x1b[90m ID = \x1b[33m", e.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",e.last_name,"\x1b[0m\x1b[90m, \x1b[0m\x1b[32m",e.first_name,"\x1b[0m") as name,
+CONCAT("  ● \x1b[90m ID = \x1b[33m", e.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",e.last_name,"\x1b[0m\x1b[90m, \x1b[0m\x1b[32m",e.first_name,"\x1b[0m") as name,
 e.id as value
 FROM employee e
 
@@ -42,7 +42,7 @@ FROM employee e
 const requestDepartmentInquirerSQL =          // SQL to pull all Department in an array suitable for inquirer
 `
 SELECT 
-CONCAT("● \x1b[90m ID = \x1b[33m", d.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",d.name,"\x1b[0m") as name,
+CONCAT("  ● \x1b[90m ID = \x1b[33m", d.id,"\x1b[0m\x1b[90m, Name = \x1b[0m\x1b[32m",d.name,"\x1b[0m") as name,
 d.id as value
 FROM department d
 
@@ -106,19 +106,16 @@ function launch() {
                     console.log(`\x1b[31m  ┌─────────────────────────┐\x1b[0m`);
                     console.log(`\x1b[31m  │ Thanks for dropping by! │\x1b[0m`);
                     console.log(`\x1b[31m  └─────────────────────────┘\x1b[0m`);
-                    process.exit()
-                    return;
+                    process.exit()                
+            //- Default -//
+                default:
                 break;
-            }
+            };
         })
         .catch ((err) => {
             console.log(err)
         });
-}
-
-//-------------//
-//- Functions -//
-//-------------//
+};
 
 //-----------------------------------//
 //- Function - View all departments -//
@@ -126,27 +123,36 @@ function launch() {
 
 const viewDepartments = async () => {
     try{
+        // Inquirer Prompt - Summary or Detailed View
         const typeofViewDept = await inquirer.prompt ([
             {
                 type: 'list',
                 name: 'typeOfView',
                 message: 'What type of Department View would you like?',
                 choices: [
-                    {name: 'Summary of Departments', value: 0},
-                    {name: 'Detailed record of Departments', value: 1}
+                    {name: '  ● Summary view (Departments only)', value: 0},
+                    {name: '  ● Detailed view (Departments and associated roles and employees)', value: 1}
                 ]
             }
         ])
 
-        if (typeofViewDept.typeOfView === 0) {
-            const response = await db.promise().query(`SELECT * FROM department;`)
+        // Respond to user choice
+        if (typeofViewDept.typeOfView === 0) {      // Summary View
+            
+            // Query database for SUMMARY view of Dapartments
+            const showSummaryDept = await db.promise().query(`SELECT * FROM department;`)
+
+            // Display banner
             console.log("");
             console.log(`\x1b[35m  ┌─────────────────────────────┐\x1b[0m`);
             console.log(`\x1b[35m  │ Summary View of Departments │\x1b[0m`);
             console.log(`\x1b[35m  └─────────────────────────────┘\x1b[0m`); 
-            console.table(response[0])
-        } else {
-            viewAllDeptSQL = `
+            
+            // Display Summary View to user
+            console.table(showSummaryDept[0])
+        } else {                                    // Detailed View
+            // Query database for DETAILED view of Dapartments
+            detailedDeptSQL = `
             SELECT 
             d.id as Department_ID,
             d.name AS Department,r.title AS Role,
@@ -158,19 +164,23 @@ const viewDepartments = async () => {
             LEFT JOIN employee e ON r.id = e.role_id
             LEFT JOIN employee m ON e.manager_id = m.id;
             `
-            const response = await db.promise().query(viewAllDeptSQL)
+            const showDetailedDept = await db.promise().query(detailedDeptSQL)
+
+            // Display banner
             console.log("");
             console.log(`\x1b[35m  ┌──────────────────────────────┐\x1b[0m`);
             console.log(`\x1b[35m  │ Detailed View of Departments │\x1b[0m`);
             console.log(`\x1b[35m  └──────────────────────────────┘\x1b[0m`); 
-            console.table(response[0])
+            
+            // Display Detailed View to user
+            console.table(showDetailedDept[0])
         }
         
-        if (viewDeptCalledByFunction === 1) {       // if viewDeptartment was called by function then return there
-            viewDeptCalledByFunction = 0                // set flag to zero
-            return                                      // return to function to continue
+        if (viewDeptCalledByFunction === 1) {       // Value of 1 means viewDepartments() was called by a function
+            viewDeptCalledByFunction = 0                // Reset the value to zero
+            return                                      // Return back to the function that called viewDepartments()        
         } else {
-            launch();                               // Otherwise it was called by mainmenu - go there 
+            launch();                               // Else return to Main Menu 
         }           
     }
     catch (err) {
@@ -182,8 +192,14 @@ const viewDepartments = async () => {
 //- Function - View all roles -//
 //-----------------------------//
 
-const viewRoles = async () => {
+const viewRoles = async () => {    
+    console.log("");
+    console.log(`\x1b[35m  ┌────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ View all Roles │\x1b[0m`);
+    console.log(`\x1b[35m  └────────────────┘\x1b[0m`);   
+
     try{
+        // Query database for Role records
         const roleSQL = 
         `
         SELECT 
@@ -195,18 +211,17 @@ const viewRoles = async () => {
         LEFT JOIN department d ON r.department_id = d.id
         `
         const response = await db.promise().query(roleSQL)
-            console.log("");
-            console.log(`\x1b[35m  ┌────────────────┐\x1b[0m`);
-            console.log(`\x1b[35m  │ View all Roles │\x1b[0m`);
-            console.log(`\x1b[35m  └────────────────┘\x1b[0m`);                  
-            console.table(response[0])
+        
+        // Display Role Records
+        console.table(response[0])
 
-            if (viewRoleCalledByFunction === 1) {       // if viewRole was called by function then return there
-                viewRoleCalledByFunction = 0                // set flag to zero
-                return                                      // return to function to continue
-            } else {
-                launch();                               // Otherwise it was called by mainmenu - go there 
-            }    
+        // Determine how to close function 
+        if (viewRoleCalledByFunction === 1) {       // Value of 1 means viewRoles() was called by a function
+            viewRoleCalledByFunction = 0                // Reset the value to zero
+            return                                      // Return back to the function that called viewRole()
+        } else {
+            launch();                               // Else return to Main Menu
+        }
     }
     catch (err) {
         console.log(err)
@@ -218,7 +233,13 @@ const viewRoles = async () => {
 //---------------------------------//
 
 const viewEmployees = async() => {    
+    console.log("");   
+    console.log(`\x1b[35m  ┌────────────────────┐\x1b[0m`);
+    console.log(`\x1b[35m  │ View all Employees │\x1b[0m`);
+    console.log(`\x1b[35m  └────────────────────┘\x1b[0m`);
+
     try{
+        // Query database for Employee records
         const employeeSQL =        
         `
         SELECT 
@@ -233,24 +254,23 @@ const viewEmployees = async() => {
         LEFT JOIN department d ON r.department_id = d.id
         LEFT JOIN employee m ON e.manager_id = m.id;
         `
-        const response = await db.promise().query(employeeSQL)
-            console.log("");   
-            console.log(`\x1b[35m  ┌────────────────────┐\x1b[0m`);
-            console.log(`\x1b[35m  │ View all Employees │\x1b[0m`);
-            console.log(`\x1b[35m  └────────────────────┘\x1b[0m`);         
-            console.table(response[0])
+        const response = await db.promise().query(employeeSQL);
 
-            if (viewEmpCalledByFunction === 1) {       // if viewEmployees was called by function then return there
-                viewEmpCalledByFunction = 0                // set flag to zero
-                return                                      // return to function to continue
-            } else {
-                launch();                               // Otherwise it was called by mainmenu - go there 
-            }    
+        // Display Employee Records
+        console.table(response[0]);
+
+        // Determine how to close function 
+        if (viewEmpCalledByFunction === 1) {        // Value of 1 means viewEmployees() was called by a function
+            viewEmpCalledByFunction = 0                 // Reset the value to zero
+            return                                      // Return back to the function that called viewEmployees()
+        } else {
+            launch();                               // Else return to Main Menu
+        }    
     }
     catch (err) {
         console.log(err)
-    }    
-}
+    };    
+};
 
 //---------------------------------//
 //- Function - Add New Department -//
@@ -262,27 +282,31 @@ const addDepartment = async () => {
     console.log(`\x1b[35m  │ Add New Department │\x1b[0m`);
     console.log(`\x1b[35m  └────────────────────┘\x1b[0m`);
     try {
-        const answers = await inquirer.prompt ([
+        // Inquirer Prompt - Department Name
+        const deptName = await inquirer.prompt ([
             {
                 type: 'input',
-                name: 'newDepartment',
+                name: 'dept',
                 message: 'Please enter the new Department name:'
             }
-        ])
+        ]);
+
+        // Insert New Department into the Detabase
+        await db.promise().query('INSERT INTO department (name) VALUES (?)', deptName.dept);        
         
-        await db.promise().query('INSERT INTO department (name) VALUES (?)', answers.newDepartment);        
-        console.log(`\x1b[33m\n   ⭐ New departemnt "${answers.newDepartment}" added successfully ⭐\x1b[0m \n`) 
-                
-        const showNewDept = await db.promise().query('SELECT id as Department_ID, name as Department_Name FROM department WHERE name = ?', answers.newDepartment);        
-        console.table (showNewDept[0])
-        if (addDeptCalledByFunction === 1) {         // Check if addDepartment was called by function - if yes then change addDpetCalledByAddRole to zero and return to add Role 
-            addDeptCalledByFunction = 0
-            // console.log(`if statement addDeptCalledByFunction = ${addDeptCalledByFunction}`)
-            return (answers.newDepartment);
-        } else {
-            // console.log("addDepartment calling MainMenu")
-            // console.log(`else addDeptCalledByFunction = ${addDeptCalledByFunction}`)
-            launch();      // Go back to main menu (call launch())             
+        // Show new Department by MAX department ID value
+        const showNewDept = await db.promise().query('SELECT d.id as Department_ID, d.name as Department_Name FROM department d WHERE d.id = (SELECT MAX(d.id) from department d)');        
+        console.table (showNewDept[0]);
+
+        // Show success Message
+        console.log(`\x1b[33m\n   ⭐ New departemnt "${deptName.dept}" added successfully ⭐\x1b[0m \n`); 
+
+        // Determine how to close function
+        if (addDeptCalledByFunction === 1) {        // Value of 1 means addDept() was called by a function
+            addDeptCalledByFunction = 0                 // Reset the value to zero
+            return;                                     // Return back to the function that called addRole()
+        } else {        
+            launch();                               // Else return to Main Menu          
         }   
     }catch (err) {
         console.log(err)
@@ -306,7 +330,7 @@ const addRole = async () => {
         departmentInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Department for this Role'})  // Add options for Cancel and return to main menu, and create department options
 
         // Inquirer Prompt - which Department
-        const deptWhich = await inquirer.prompt([                                  // ask the user which department they want to add to
+        const deptWhich = await inquirer.prompt([                                
             {
                 type: "list",
                 name: "dept",                
@@ -318,9 +342,9 @@ const addRole = async () => {
         
         // Respond to Inquirer Prompt (Department)
         if (deptWhich.dept === 0) {                                             // 1. User Selected 'Create New Department' for this role            
-            addDeptCalledByFunction = 1;                                             // Set flag to indicate addDepartment() was called by function (logic in addDepartments() built to return here instead of mainMenu (launch())
-            let newDept = await addDepartment();                                     // Call Add department function
-            const requestNewDeptID =  await db.promise().query('SELECT d.id FROM department d WHERE d.id = (SELECT MAX(d.id) from department d)'); // Request Department with Max ID value
+            addDeptCalledByFunction = 1;                                                                                                            // Set flag to indicate addDepartment() was called by function (logic in addDepartments() built to return here instead of mainMenu (launch())
+            await addDepartment();                                                                                                                  // Call Add department function
+            const requestNewDeptID = await db.promise().query('SELECT d.id FROM department d WHERE d.id = (SELECT MAX(d.id) from department d)');   // Request Department with Max ID value
             roleDeptId = requestNewDeptID[0][0].id;
         } else if (deptWhich.dept === -1) {                                     // 2. User selected 'Cancel and return to Main Menu'             
             launch();
@@ -329,7 +353,7 @@ const addRole = async () => {
             roleDeptId = deptWhich.dept;      
         };
 
-        // Inquirer - Prompt remaining values for Role 
+        // Inquirer Prompt - Remaining values for Role 
         const roleTitleSalary = await inquirer.prompt ([
             {
                 type: 'input',
@@ -348,11 +372,9 @@ const addRole = async () => {
             }
         ]);       
 
-        // Insert the record into the database
+        // Insert the New Role into the database
         await db.promise().query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [roleTitleSalary.title, roleTitleSalary.salary, roleDeptId]);
-        console.log(`\x1b[33m\n   ⭐ New Role "${roleTitleSalary.title}" added successfully ⭐\x1b[0m \n`)
         
-                
         // Show new Role by MAX Role ID value
         let showNewRoleSQL = `
         SELECT 
@@ -367,12 +389,15 @@ const addRole = async () => {
         const showNewRoleQuery = await db.promise().query(showNewRoleSQL);        
         console.table (showNewRoleQuery[0])
 
-            // console.log("Role calling MainMenu")
-        if (addRoleCalledByFunction === 1) {
-            addRoleCalledByFunction = 0  // set value to zero
-            return (answers.title)  // return the role_title
+        // Show success message
+        console.log(`\x1b[33m\n   ⭐ New Role "${roleTitleSalary.title}" added successfully ⭐\x1b[0m \n`)
+
+        // Determine how to close function
+        if (addRoleCalledByFunction === 1) {    // Value of 1 means addRole() was called by a function
+            addRoleCalledByFunction = 0             // Reset the value to zero
+            return                                  // Return back to the function that called addRole()
         } else {
-            launch();
+            launch();                           // Else return to Main Menu
         }            
     } catch (err) {
         console.log(err);        
@@ -431,15 +456,11 @@ const addEmployee = async () => {
             return;
         } else     
         if (employeeRoleID === 0) {         // 2. User wants to Create a new Role for this employee            
-            addRoleCalledByFunction = 1             // Set flag to indicate addRole() was called by a function (logic in addRole() built in to return here instead of mainMenu (launch())
-            let newRole = await addRole();          // Create new Role and return the title of new Role stored as employeeNewRole
-                if (newRole === -1) {               // The returned value is "-1" if the user cancels out of addRole, this statement is necessary to terminate await functions in addEmployee(). If not, these await functions will continue the next time addEmployee() is engaged
-                    return;
-                } else {
-                console.log (newRole)               // Is this required?
-                const requestNewRoleID = await db.promise().query('SELECT id from role WHERE title = ?', newRole)      // Run Query to pull ID of new Role and store as employeeNewRoleID
-                employeeRoleID = requestNewRoleID[0][0].id                                                             // Store freshly created Role ID as employeeRoleID
-                }
+            addRoleCalledByFunction = 1                                                                                                 // Set flag to indicate addRole() was called by a function (logic in addRole() built in to return here instead of mainMenu (launch())
+            await addRole();                                                                                                            // Create new Role and return the title of new Role stored as employeeNewRole
+            const requestNewRoleID = await db.promise().query('SELECT r.id FROM role r WHERE r.id = (SELECT MAX(r.id) from role r)');   // Request Role with Max ID value
+            employeeRoleID = requestNewRoleID[0][0].id                                                                                  // Store freshly created Role ID as employeeRoleID
+                // }
         } else {                            // 3. User selected existing Role - proceed as normal
         }
         
@@ -463,8 +484,7 @@ const addEmployee = async () => {
         
         // Insert New Employee Record into the database
         await db.promise().query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)', [employeeName.firstName, employeeName.lastName, employeeRoleID, employeeManager.manager]);
-        console.log(`\x1b[33m\n   ⭐ New employee "${employeeName.firstName} ${employeeName.lastName}" added successfully ⭐\x1b[0m \n`) 
-        
+                
         // Show new employee by MAX employee ID value
         const showNewEmployeeSQL =`
         SELECT 
@@ -484,6 +504,9 @@ const addEmployee = async () => {
         `
         const showNewEmployee = await db.promise().query(showNewEmployeeSQL);
         console.table (showNewEmployee[0]);
+
+        // Show success message
+        console.log(`\x1b[33m\n   ⭐ New employee "${employeeName.firstName} ${employeeName.lastName}" added successfully ⭐\x1b[0m \n`) 
 
         launch(); 
     } catch (err) {
