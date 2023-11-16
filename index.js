@@ -141,9 +141,9 @@ const viewDepartments = async () => {
         if (typeofViewDept.typeOfView === 0) {
             const response = await db.promise().query(`SELECT * FROM department;`)
             console.log("");
-            console.log(`\x1b[35m  ┌────────────────────────────────────┐\x1b[0m`);
-            console.log(`\x1b[35m  │ Viewing Summary of all Departments │\x1b[0m`);
-            console.log(`\x1b[35m  └────────────────────────────────────┘\x1b[0m`); 
+            console.log(`\x1b[35m  ┌─────────────────────────────┐\x1b[0m`);
+            console.log(`\x1b[35m  │ Summary View of Departments │\x1b[0m`);
+            console.log(`\x1b[35m  └─────────────────────────────┘\x1b[0m`); 
             console.table(response[0])
         } else {
             viewAllDeptSQL = `
@@ -160,9 +160,9 @@ const viewDepartments = async () => {
             `
             const response = await db.promise().query(viewAllDeptSQL)
             console.log("");
-            console.log(`\x1b[35m  ┌────────────────────────────────────────────┐\x1b[0m`);
-            console.log(`\x1b[35m  │ Viewing Detailed record of all Departments │\x1b[0m`);
-            console.log(`\x1b[35m  └────────────────────────────────────────────┘\x1b[0m`); 
+            console.log(`\x1b[35m  ┌──────────────────────────────┐\x1b[0m`);
+            console.log(`\x1b[35m  │ Detailed View of Departments │\x1b[0m`);
+            console.log(`\x1b[35m  └──────────────────────────────┘\x1b[0m`); 
             console.table(response[0])
         }
         
@@ -343,7 +343,7 @@ const addRole = async () => {
             {
                 type: 'input',
                 name: 'salary',
-                message: 'What is the Salary of this new Role?',
+                message: 'What is the Salary of this new Role? (Use numbers only)',
                 validate: (answer) => {
                     if (isNaN(answer)) {
                         return false, "please enter valid number";  
@@ -966,26 +966,41 @@ const deleteRole = async () => {
 
         //Show user the record being targetted for deletion
         const deleteRoleSelectedSQL =
-        ` 
+        // ` 
+        // SELECT 
+        // r.id as Role_ID,
+        // r.title as Title,
+        // CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
+        // d.name as Department
+        // FROM role r
+        // LEFT JOIN department d ON r.department_id = d.id
+        // where r.id = ?;
+        // `
+        `
         SELECT 
         r.id as Role_ID,
-        r.title as Title,
+        r.title as Role,
         CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
-        d.name as Department
+        d.name as Department,
+        CONCAT(e.last_name,", ",e.first_name) AS Employee
         FROM role r
         LEFT JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee e ON r.id = e.role_id
         where r.id = ?;
         `
+
+
+
         const deleteRoleSelected = await db.promise().query(deleteRoleSelectedSQL, roleWhich.role);
         console.table (deleteRoleSelected[0])
-
+        console.log(`\x1b[33m\n   ❗Note: The DEPARTMENT and EMPLOYEES are preserved if the ROLE is deleted❗\x1b\n[0m`);
         //Are you sure
         const areYouSure = await inquirer.prompt ([
             {
                 type: 'list',
                 name: 'sure',
                 pageSize: 12,
-                message: "Are you sure you want to delete this ROLE? This cannot be reversed!",
+                message: "Are you sure you want to delete this ROLE? This cannot be reversed.",
                 choices: [
                     {name: 'Yes, please proceed', value: 1},
                     {name: 'No, cancel this request', value: 0}
