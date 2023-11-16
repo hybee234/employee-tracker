@@ -184,14 +184,15 @@ const viewDepartments = async () => {
 
 const viewRoles = async () => {
     try{
-        const roleSQL = `
+        const roleSQL = 
+        `
         SELECT 
-        r.id AS Role_ID,
-        d.name AS Department,
-        r.title AS Role,
-        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary     
+        r.id as Role_ID,
+        r.title as Role,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
+        d.name as Department
         FROM role r
-        LEFT JOIN department d ON r.department_id = d.id;
+        LEFT JOIN department d ON r.department_id = d.id
         `
         const response = await db.promise().query(roleSQL)
             console.log("");
@@ -291,50 +292,45 @@ const addDepartment = async () => {
 //---------------------------//
 //- Function - Add new Role -//
 //---------------------------//
-    // id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    // title VARCHAR(30) NOT NULL,
-    // salary DECIMAL,
-    // department_id INT, - which department
 
 const addRole = async () => {    
     console.log("");
     console.log(`\x1b[35m  ┌──────────────┐\x1b[0m`);
     console.log(`\x1b[35m  │ Add New Role │\x1b[0m`);
     console.log(`\x1b[35m  └──────────────┘\x1b[0m`);   
-    // Create department constant
-    try {
-        const allDepartmentQuery = await db.promise().query(`SELECT * FROM department;`)                    // Pull fresh extract of department
-            const arrayDept = allDepartmentQuery[0]                                                                                   // set ArrayDept to equal reponse index value zero
-            arrayDept.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Department for this Role'})       // return to main menu and create department options
-            // console.log("Array Dept")
-            // console.log(arrayDept)
 
-        const answer = await inquirer.prompt([                                  // ask the user which department they want to add to
+    try {
+        // Prepare Department Array for Inquirer
+        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);                                                                                       // Pull fresh extract of department
+        let departmentInquirer = requestDepartmentInquirer[0];                                                                                                                          // Save it as departmentInquirer
+        departmentInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Department for this Role'})  // Add options for Cancel and return to main menu, and create department options
+
+        // Inquirer Prompt - which Department
+        const deptWhich = await inquirer.prompt([                                  // ask the user which department they want to add to
             {
                 type: "list",
-                name: "roleDepartment",                
+                name: "dept",                
                 pageSize: 12,
                 message: "Which department does this role sit under?",                
-                choices: arrayDept
+                choices: departmentInquirer
             },
         ])
         
-        if (answer.roleDepartment === 0) {                                      // if user selects 'Create New Department"
-            // console.log ("roleDepartment === 0, calling add Department")
-            addDeptCalledByFunction = 1                                          // Set "addDeptCalledByFunction = 1" to indicate YES
-            // console.log(`addDeptCalledByFunction = ${addDeptCalledByFunction}`)                             
-            roleDept = await addDepartment();                                   // call Add department function
-        } else if (answer.roleDepartment === -1) {                              // if users selects "Back to main menu"
-            // console.log ("roleDepartment === -1, Back to main menu")
+        // Respond to Inquirer Prompt (Department)
+        if (deptWhich.dept === 0) {                                             // 1. User Selected 'Create New Department' for this role            
+            addDeptCalledByFunction = 1;                                             // Set flag to indicate addDepartment() was called by function (logic in addDepartments() built to return here instead of mainMenu (launch())
+            let newDept = await addDepartment();                                     // Call Add department function
+            const requestNewDeptID =  await db.promise().query('SELECT d.id FROM department d WHERE d.id = (SELECT MAX(d.id) from department d)'); // Request Department with Max ID value
+            roleDeptId = requestNewDeptID[0][0].id;
+        } else if (deptWhich.dept === -1) {                                     // 2. User selected 'Cancel and return to Main Menu'             
             launch();
-            return(-1)            
-        } else {                                                                // if user selects an existing department
-            // console.log ("roleDepartment is good value, existing department") 
-            roleDept = answer.roleDepartment;      
-        }
+            return          
+        } else {                                                                // 3. User has selected an existing Department             
+            roleDeptId = deptWhich.dept;      
+        };
 
-        // Ask for the rest of the values for the role//
-        const answers = await inquirer.prompt ([
+        // Inquirer - Prompt remaining values for Role 
+        const roleTitleSalary = await inquirer.prompt ([
             {
                 type: 'input',
                 name: 'title',
@@ -350,17 +346,14 @@ const addRole = async () => {
                     } return true;
                 }
             }
-        ])
-        // Insert the record into the role table//
-        const roleDeptIdRes =  await db.promise().query('SELECT * FROM department WHERE name = ?', roleDept)
-            // console.log (roleDeptIdRes)
-            // console.log (roleDeptIdRes[0][0].id)
-            const roleDeptId = roleDeptIdRes[0][0].id;
+        ]);       
 
-        await db.promise().query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [answers.title, answers.salary, roleDeptId]);
-            console.log(`\x1b[33m\n   ⭐ New Role "${answers.title}" added successfully ⭐\x1b[0m \n`)
+        // Insert the record into the database
+        await db.promise().query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [roleTitleSalary.title, roleTitleSalary.salary, roleDeptId]);
+        console.log(`\x1b[33m\n   ⭐ New Role "${roleTitleSalary.title}" added successfully ⭐\x1b[0m \n`)
         
-            //Log freshly created role for user to see - utilising maximum ID value on role table (Max = newest)
+                
+        // Show new Role by MAX Role ID value
         let showNewRoleSQL = `
         SELECT 
         r.id AS Role_ID,
@@ -382,20 +375,13 @@ const addRole = async () => {
             launch();
         }            
     } catch (err) {
-        console.log(err);
-        
-    }
+        console.log(err);        
+    };
 };
 
 //-------------------------------//
 //- Function - Add new Employee -//
 //-------------------------------//
-// id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-// first_name VARCHAR(30) NOT NULL,
-// last_name VARCHAR(30) NOT NULL,
-// role_id INT, - which role
-// manager_id - which manager
-
 
 const addEmployee = async () => {    
     console.log("");
@@ -403,21 +389,17 @@ const addEmployee = async () => {
     console.log(`\x1b[35m  │ Add New Employee │\x1b[0m`);
     console.log(`\x1b[35m  └──────────────────┘\x1b[0m`);    
     try{
-        // Extract Role table and store in arrayRole (for use in inquirer choices)
-        const responseRoleQuery = await db.promise().query(`SELECT id as value, title AS name FROM role;`)                                               // Pull fresh extract of Roles
-            const arrayRole = responseRoleQuery[0]                                                                                                             // set arrayRole to equal reponse index value zero
-            arrayRole.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Role for this Employee'})   // add options to return to main menu and create department options
-            // console.log("Array Role")
-            // console.log(arrayRole)
+        // Prepare Role Array for Inquirer
+        const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);                                                                                             // Pull fresh extract of Roles
+        let roleInquirer = requestRoleInquirer[0];                                                                                                                                // Save it as roleInquirer
+        roleInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'}, {value: 0, name: ' \x1b[32m＋\x1b[0m Create New Role for this Employee'});   // add options to return to main menu and create department options
 
-        // Extract employee table and store in arrayManager (for use in inquirer choices)
-        const responseManager = await db.promise().query(`SELECT id as value, CONCAT(last_name,", ", first_name) as name FROM employee;`)           // Pull fresh extract of employee
-            arrayManager = responseManager[0]                                                                                                       // set arrayManager to equal reponse index value zero
-            arrayManager.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})                                                           // add option to return to main menu option
-            // console.log("Array Manager")
-            // console.log(arrayManager)
+        // Prepare Employee Array for Inquirer       
+        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL);               // Pull fresh extract of Employees
+        let employeeInquirer = requestEmployeeInquirer[0];                                                  // Save it as employeeInquirer
+        employeeInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'});   // add option to return to main menu
 
-        //Ask questions about employee Name
+        // Inquirer Prompt - First Name and Last Name
         const employeeName = await inquirer.prompt ([
             {
                 type: 'input',
@@ -431,95 +413,83 @@ const addEmployee = async () => {
             } 
         ]);   
 
-        //Ask question about employee Role    
+        // Inquirer Prompt - Role
         const employeeRole = await inquirer.prompt ([
             {
                 type: 'list',
                 name: 'role',
                 pageSize: 12,
                 message: "Please select the role of the new Employee",
-                choices: arrayRole
+                choices: roleInquirer
             }
         ]);
         
-        //Check response to role - cancel and return to main menu, add new role, proceed ahead)
+        // Respond to Role - Cancel and return to main menu, Add new Role, Use exiting Role)
         let employeeRoleID = employeeRole.role  
-        if (employeeRoleID === -1) {                                                    // Cancel and retrun to main menu
-            // console.log (`employeeRole.role = ${employeeRoleID} - return to main menu`)
+        if (employeeRoleID === -1) {        // 1. User wants to Cancel and retrun to main menu            
             launch();
             return;
         } else     
-        if (employeeRoleID === 0) {                                                                                     // Create new Role for this employee
-            // console.log (`employeeRoleID = ${employeeRoleID} - create role`)
-            addRoleCalledByFunction = 1                                                                                  // Flags that addRole was called by addEmployee function (used by addRole() to either return a value or go back to main manui)
-            let employeeNewRole = await addRole();                                                                          // Create new Role and return the title of new Role stored as employeeNewRole
-                if (employeeNewRole === -1) {                                                                                       // The returned value is "-1" if the user cancels out of addRole, this if statement is necessary to terminate end the addEmployee functions from continuing to execute any await functions the next time the use attempts to addRole
+        if (employeeRoleID === 0) {         // 2. User wants to Create a new Role for this employee            
+            addRoleCalledByFunction = 1             // Set flag to indicate addRole() was called by a function (logic in addRole() built in to return here instead of mainMenu (launch())
+            let newRole = await addRole();          // Create new Role and return the title of new Role stored as employeeNewRole
+                if (newRole === -1) {               // The returned value is "-1" if the user cancels out of addRole, this statement is necessary to terminate await functions in addEmployee(). If not, these await functions will continue the next time addEmployee() is engaged
                     return;
                 } else {
-                console.log (employeeNewRole) 
-                const employeeNewRoleID = await db.promise().query('SELECT id from role WHERE title = ?', employeeNewRole)      // Run Query to pull ID of new Role and store as employeeNewRoleID
-                employeeRoleID = employeeNewRoleID[0][0].id                                                                     // assign new Role ID to employeeRoleID 
-                }// console.log (`employeeRoleID = ${employeeRoleID} - (after creating new role)`)
-        } else {                                                                                                        // Proceed as normal
-            // console.log (`employeeRoleID = ${employeeRoleID} - keep going`)
+                console.log (newRole)               // Is this required?
+                const requestNewRoleID = await db.promise().query('SELECT id from role WHERE title = ?', newRole)      // Run Query to pull ID of new Role and store as employeeNewRoleID
+                employeeRoleID = requestNewRoleID[0][0].id                                                             // Store freshly created Role ID as employeeRoleID
+                }
+        } else {                            // 3. User selected existing Role - proceed as normal
         }
         
-        //Ask question about manager//
+        // Inquirer Prompt - Manager
         const employeeManager = await inquirer.prompt ([
             {
                 type: 'list',
                 name: 'manager',
                 pageSize: 12,
                 message: "Please select the manager of the new Employee",
-                choices: arrayManager
+                choices: employeeInquirer
             },
         ])
 
-        if (employeeManager.manager === -1) {               // Cancel and retrun to main menu
+        // Respond to Manager - Cancel and return to main menu, proceed
+        if (employeeManager.manager === -1) {       // 1. Cancel and retrun to main menu
             launch();
             return;                      
-        } else {            
-            // console.log (`employeeRoleID = ${employeeRoleID} - keep going`)
+        } else {                                    // 2. Proceed            
         }
-            // console.log (`firstName = ${employeeName.firstName}`)
-            // console.log (`lastName = ${employeeName.lastName}`)
-            // console.log (`role = ${employeeRoleID}`)
-            // console.log (`manager = ${employeeManager.manager}`)
+        
+        // Insert New Employee Record into the database
+        await db.promise().query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)', [employeeName.firstName, employeeName.lastName, employeeRoleID, employeeManager.manager]);
+        console.log(`\x1b[33m\n   ⭐ New employee "${employeeName.firstName} ${employeeName.lastName}" added successfully ⭐\x1b[0m \n`) 
+        
+        // Show new employee by MAX employee ID value
+        const showNewEmployeeSQL =`
+        SELECT 
+        e.id AS Employee_ID,
+        e.first_name AS First_Name,
+        e.last_name AS Last_Name,
+        d.name AS Department,
+        r.title AS Role,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
+        m.first_name AS Manager_First_Name,
+        m.last_name AS Manager_Last_Name
+        FROM employee e
+        LEFT JOIN role r ON e.role_id = r.id
+        LEFT JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee m ON e.manager_id = m.id                
+        WHERE e.id = (SELECT MAX(e.id) FROM employee e);
+        `
+        const showNewEmployee = await db.promise().query(showNewEmployeeSQL);
+        console.table (showNewEmployee[0]);
 
-            await db.promise().query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)', [employeeName.firstName, employeeName.lastName, employeeRoleID, employeeManager.manager]);
-            console.log(`\x1b[33m\n   ⭐ New employee "${employeeName.firstName} ${employeeName.lastName}" added successfully ⭐\x1b[0m \n`) 
-            
-            // Show new employee by MAX employee ID value
-            const showNewEmployeeSQL =`
-            SELECT 
-            e1.id AS Employee_ID,
-            e1.first_name AS First_Name,
-            e1.last_name AS Last_Name,
-            d.name AS Department,
-            r.title AS Role,
-            CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
-            e2.first_name AS Manager_First_Name,
-            e2.last_name AS Manager_Last_Name
-            FROM employee e1
-            LEFT JOIN role r ON e1.role_id = r.id
-            LEFT JOIN department d ON r.department_id = d.id
-            LEFT JOIN employee e2 ON e1.manager_id = e2.id                
-            WHERE e1.id = (SELECT MAX(e1.id) FROM employee e1);
-            `
-            const showNewEmployee = await db.promise().query(showNewEmployeeSQL);
-            console.table (showNewEmployee[0]);
-
-            // console.log("Role calling MainMenu")
-            launch();    
-
+        launch(); 
     } catch (err) {
-    console.log(err);
-    
-    }
-}
-
-
-
+    console.log(err);    
+    };
+};
 
 //-------------------------------//
 //- Function - Update Employee -//
@@ -532,16 +502,16 @@ const updateEmployee = async () => {
     console.log(`\x1b[35m  └────────────────────────────────┘\x1b[0m`);    
 
     try{
-    // Work out which employee the user wants to update and whether they want to update Role or Manager
-        // Display current employees for the user to view
-        viewEmpCalledByFunction = 1            // Set flag to indicate view Employes was called by Update Employees (and to return here instead of going back to main menu)                 
-        await viewEmployees();                  // request extract of employees via viewEmployees function                
+        // Determine target Employee first
+        // Show all Employees to User
+        viewEmpCalledByFunction = 1;           // Set flag to indicate viewEmployes() was called by function (logic in viewEmployees() built to return here instead of mainMenu (launch())
+        await viewEmployees();                 // Display Employees for user to see                   
 
-        // SQL query requested
-        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL)           // Pull fresh extract of employee (requestEmployeeInquirerSQL is global const)
-        // Emplopyee array created
-        employeeInquirer = requestEmployeeInquirer[0]                                       // Set array to pull index [0]
+        // Prepare Employee Array for Inquirer
+        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL);      // Pull fresh extract of employees
+        employeeInquirer = requestEmployeeInquirer[0];                                             // Save it as employeeInquirer
 
+        // Inquirer prompt - Which Employee?
         const employeeUpdate = await inquirer.prompt ([
             {
                 type: 'list',
@@ -550,9 +520,9 @@ const updateEmployee = async () => {
                 message: "Please select the EMPLOYEE to update",
                 choices: employeeInquirer
             },
-        ])
+        ]);
 
-        // Show the user the selected employee 
+        // Show user the employee targetted for update
         const showSelectedEmployeeSQL =`
         SELECT 
         e1.id as Employee_ID,
@@ -568,8 +538,9 @@ const updateEmployee = async () => {
         WHERE e1.id = ?;
         `
         const reqShowSelectedEmployee = await db.promise().query(showSelectedEmployeeSQL,employeeUpdate.employee);
-        console.table (reqShowSelectedEmployee[0]);                                                                     // this is the selected employee_ID
+        console.table (reqShowSelectedEmployee[0]);                                                                     // Targetted Employee's Employee_ID
 
+        // Inquirer prompt - What to update?
         const employeeUpdateWhat = await inquirer.prompt ([
             {
                 type: 'list',
@@ -583,31 +554,22 @@ const updateEmployee = async () => {
             }
         ])
 
-        if (employeeUpdateWhat.updateWhat === "role") {
+        // Respond to User Choice.
+        if (employeeUpdateWhat.updateWhat === "role") { // User has selected "Role"
             console.log("")
             console.log(`\x1b[35m  ┌─────────────┐\x1b[0m`);
             console.log(`\x1b[35m  │ Update Role │\x1b[0m`);
-            console.log(`\x1b[35m  └─────────────┘\x1b[0m`);   
-        
-            // Show user the Roles avaialable
-            const requestRoleSQL = `
-            SELECT 
-            r.id as Role_ID,
-            r.title as Title,
-            CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
-            d.name as Department
-            FROM role r
-            LEFT JOIN department d ON r.department_id = d.id
-            `
-            // SQL query requested
-            const requestRole = await db.promise().query(requestRoleSQL)           // Pull fresh extract of role
-            roleArray = requestRole[0]                                               // Set array to pull index [0]
-            console.table(roleArray)                    // Show role table to user
+            console.log(`\x1b[35m  └─────────────┘\x1b[0m`);                      
 
-            // SQL query requested
-            const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);           // Pull fresh extract of employee  (requestRoleInquirerSQL is global const)          
-            let roleInquirer = requestRoleInquirer[0];                                 // Role array "roleInquirer" created           
-            //Inquirer prompt
+            // Show all Roles to User
+            viewRoleCalledByFunction = 1;     // Set flag to indicate viewRoles() was called by function (logic in viewRoles() built to return here instead of mainMenu (launch())
+            await viewRoles();                // Display Roles for user to see
+
+            // Prepare Role Array for Inquirer
+            const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);           // Pull fresh extract of Roles
+            let roleInquirer = requestRoleInquirer[0];                                              // Save it as roleInquirer  
+            
+            // Inquirer prompt - New Role
             const roleWhich = await inquirer.prompt ([
                 {
                     type: 'list',
@@ -618,7 +580,7 @@ const updateEmployee = async () => {
                 },
             ]);
 
-            // Update the record
+            // Respond to User selection - Update the Role against Employee
             const updateRoleSQL = 
             `
             UPDATE employee
@@ -626,50 +588,51 @@ const updateEmployee = async () => {
             WHERE id = ?;
             `
             await db.promise().query(updateRoleSQL, [roleWhich.role, reqShowSelectedEmployee[0][0].Employee_ID]);
-            console.log(`\x1b[33m\n   ⭐ Role updated successfully! ⭐\x1b[0m \n`);
-            
+            console.log(`\x1b[33m\n   ⭐ Role updated successfully! ⭐\x1b[0m \n`);            
         };
         if (employeeUpdateWhat.updateWhat === "manager") {
             console.log("");
             console.log(`\x1b[35m  ┌────────────────┐\x1b[0m`);
             console.log(`\x1b[35m  │ Update Manager │\x1b[0m`);
             console.log(`\x1b[35m  └────────────────┘\x1b[0m`);   
+
+            // Inquirer Prompt - Who is the new manager?
             const managerWhich = await inquirer.prompt ([
                 {
                     type: 'list',
                     name: 'manager',
                     pageSize: 12,
                     message: "Select the NEW MANAGER for the employee:",
-                    choices: employeeInquirer
+                    choices: employeeInquirer           // This Array was assemble at the start of this function
                 },
             ]);
-            // console.log (managerWhich.manager)                                          // This is the employee_id to update into manager_ID column
-            
-            // Update the employee record to the selected manager
+                        
+            // Respond to User Selection - Update Manager 
             const updateManagerSQL = 
             `
             UPDATE employee
             SET manager_id = ?
             WHERE id = ?;
             `
-            await db.promise().query(updateManagerSQL, [managerWhich.manager, reqShowSelectedEmployee[0][0].Employee_ID] ); 
+            await db.promise().query(updateManagerSQL, [managerWhich.manager, reqShowSelectedEmployee[0][0].Employee_ID]); 
             console.log(`\x1b[33m\n   ⭐ Manager updated successfully! ⭐\x1b[0m \n`);
         };
         
-        // Show updated record to user
-        const showSelectedEmployeeAfterUpdateSQL =`
+        // Show updated Employee Record to user
+        const showSelectedEmployeeAfterUpdateSQL =
+        `
         SELECT 
-        e1.id as Employee_ID,
-        CONCAT(e1.last_name,", ",e1.first_name) as Name,
+        e.id as Employee_ID,
+        CONCAT(e.last_name,", ",e.first_name) as Name,
         d.name AS Department,
         r.title AS Role,
         CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
-        CONCAT(e2.last_name,", ",e2.first_name) as Manager
-        FROM employee e1
-        LEFT JOIN role r ON e1.role_id = r.id
+        CONCAT(m.last_name,", ",m.first_name) as Manager
+        FROM employee e
+        LEFT JOIN role r ON e.role_id = r.id
         LEFT JOIN department d ON r.department_id = d.id
-        LEFT JOIN employee e2 ON e1.manager_id = e2.id              
-        WHERE e1.id = ?;
+        LEFT JOIN employee m ON e.manager_id = m.id              
+        WHERE e.id = ?;
         `
         const reqShowUpdatedRecord = await db.promise().query(showSelectedEmployeeAfterUpdateSQL,employeeUpdate.employee);
         console.table (reqShowUpdatedRecord[0]); 
@@ -679,10 +642,6 @@ const updateEmployee = async () => {
         console.log(err);        
     };
 };
-
-//--------------------//
-//- BONUS CONTENT !! -//
-//--------------------//
 
 //--------------------------------------------//
 //- Function - View all Employees By Manager -//
@@ -695,9 +654,11 @@ const viewEmployeesByManager = async () => {
     console.log(`\x1b[35m  └───────────────────────────────┘\x1b[0m`);    
 
     try{
-        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL);           // Pull fresh extract of employee  (requestRoleInquirerSQL is global const)          
-        let employeeInquirer = requestEmployeeInquirer[0];                                 // Role array "roleInquirer" created           
-        //Inquirer prompt
+        // Prepare Employee Array for Inquirer       
+        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL);           // Pull fresh extract of Employees
+        let employeeInquirer = requestEmployeeInquirer[0];                                              // Save it as employeeInquirer
+        
+        // Inquirer prompt
         const managerWhich = await inquirer.prompt ([
             {
                 type: 'list',
@@ -708,6 +669,7 @@ const viewEmployeesByManager = async () => {
             },
         ]);
         
+        // Respond to User selection
         const viewEmpByManagerSQL =
         `
         SELECT 
@@ -725,8 +687,6 @@ const viewEmployeesByManager = async () => {
         `
         const viewEmpByManager = await db.promise().query(viewEmpByManagerSQL,managerWhich.manager);
         console.table (viewEmpByManager[0]); 
-
-
 
         launch();
     }
@@ -746,9 +706,11 @@ const viewEmployeesByDepartment = async () => {
     console.log(`\x1b[35m  └──────────────────────────────────┘\x1b[0m`);    
 
     try{
-        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);           // Pull fresh extract of employee  (requestRoleInquirerSQL is global const)          
-        let departmentInquirer = requestDepartmentInquirer[0];                                 // Role array "roleInquirer" created           
-        //Inquirer prompt
+        // Prepare Department Array for Inquirer
+        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);           // Pull fresh extract of department
+        let departmentInquirer = requestDepartmentInquirer[0];                                              // Save it as departmentInquirer
+
+        // Inquirer prompt
         const deptWhich = await inquirer.prompt ([
             {
                 type: 'list',
@@ -759,6 +721,7 @@ const viewEmployeesByDepartment = async () => {
             },
         ]);
         
+        // Respond to User selection
         const viewEmpByDeptSQL =
         `
         SELECT 
@@ -798,10 +761,12 @@ const viewTotalSalaryDept = async () => {
     console.log(`\x1b[35m  └─────────────────────────────────────────┘\x1b[0m`);    
 
     try{
-        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);               // Pull fresh extract of department
-        let departmentInquirer = requestDepartmentInquirer[0];                                                   // Department array 
-        departmentInquirer.unshift({value: 'all', name: ' \x1b[31m∑\x1b[0m  Show summary for all Departments'})   // add options to Summarise Salary total for all departments
-        //Inquirer prompt
+        // Prepare Department Array for Inquirer
+        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);                   // Pull fresh extract of department
+        let departmentInquirer = requestDepartmentInquirer[0];                                                      // Save it as departmentInquirer
+        departmentInquirer.unshift({value: 'all', name: ' \x1b[31m∑\x1b[0m  Show summary for all Departments'});    // add option to show Salary Summary for ALL departments
+        
+        // Inquirer prompt
         const deptWhich = await inquirer.prompt ([
             {
                 type: 'list',
@@ -811,8 +776,9 @@ const viewTotalSalaryDept = async () => {
                 choices: departmentInquirer
             },
         ]);
-        // console.log  (deptWhich.dept)        
-        if (deptWhich.dept === 'all') {
+        
+        // Respond to User selection
+        if (deptWhich.dept === 'all') {                 // If user selects "all " then run query to obtain Salary Summary for ALL Departments
             requestDeptSalarySQL =
             `
             SELECT 
@@ -826,7 +792,7 @@ const viewTotalSalaryDept = async () => {
             GROUP BY d.id
             ORDER BY d.id;
             `
-        } else {
+        } else {                                        // If user selects a department then run query to obtain Slary Summary for the CHOSEN Department
             requestDeptSalarySQL =
             `
             SELECT 
@@ -840,11 +806,10 @@ const viewTotalSalaryDept = async () => {
             WHERE d.id = ?;
             ` 
         }
-
         const requestDeptSalary = await db.promise().query(requestDeptSalarySQL,deptWhich.dept);
         console.table (requestDeptSalary[0]); 
-
-        launch();
+        
+        launch();   
     }
     catch (err) {
         console.log(err);        
@@ -862,15 +827,16 @@ const deleteDepartment = async () => {
     console.log(`\x1b[35m  └───────────────────┘\x1b[0m`);    
 
     try{
-        viewDeptCalledByFunction = 1   // set flag to 1
-        await viewDepartments()
+        // Show all Departments to User
+        viewDeptCalledByFunction = 1         // Set flag to indicate viewDepartments() was called by function (logic in viewDepartments() built to return here instead of mainMenu (launch())
+        await viewDepartments()              // Display Employees for user to see  
         
-        //Create array for inquirer
-        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);               // Pull fresh extract of department
-        let departmentInquirer = requestDepartmentInquirer[0];                                                   // Department array 
-        departmentInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})      // Add option of cancel and return to main menu
+        // Prepare Department Array for Inquirer
+        const requestDepartmentInquirer = await db.promise().query(requestDepartmentInquirerSQL);               // Pull fresh extract of Departments
+        let departmentInquirer = requestDepartmentInquirer[0];                                                  // Save it as departmentInquirer
+        departmentInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'});     // Add option of cancel and return to main menu
         
-        //Inquirer prompt
+        // Inquirer prompt
         const deptWhich = await inquirer.prompt ([
             {
                 type: 'list',
@@ -881,18 +847,31 @@ const deleteDepartment = async () => {
             },
         ]);
         
-        //  If user selects "Cancel and return to main menu" then call launch() and return
+        // If user selects "Cancel and return to main menu" then call launch() and return
         if (deptWhich.dept === -1) {                
-            launch()
+            launch();
             return;
         }
 
-        //Show user the record being targeted for deletion
-        const deleteDeptSelected = await db.promise().query("SELECT id as Department_ID, name as Department_Name FROM department WHERE id = ?", deptWhich.dept);
-        console.table (deleteDeptSelected[0])
-        // console.log (deleteDeptSelected[0][0].Department_Name)
+        // Show user the record being targeted for deletion
+        const deleteDepartmentSelectedSQL =
+        `
+        SELECT 
+        d.id AS Department_ID,
+        d.name AS Department,
+        r.title AS Role,
+        CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
+        CONCAT(e.last_name,", ",e.first_name) AS Employee
+        FROM department d        
+        LEFT JOIN role r ON d.id = r.department_id
+        LEFT JOIN employee e ON r.id = e.role_id
+        where d.id = ?;
+        `
+        const deleteDeptSelected = await db.promise().query(deleteDepartmentSelectedSQL, deptWhich.dept);
+        console.table (deleteDeptSelected[0]);
+        console.log(`\x1b[33m\n   ❗Note: ROLES and EMPLOYEES are preserved if the DEPARTMENT is deleted❗\x1b\n[0m`);
 
-        //Are you sure
+        // Are you sure?
         const areYouSure = await inquirer.prompt ([
             {
                 type: 'list',
@@ -903,10 +882,11 @@ const deleteDepartment = async () => {
                     {name: 'Yes, please proceed', value: 1},
                     {name: 'No, cancel this request', value: 0}
                 ]
-            },
+            }
         ]);
 
-        if (areYouSure.sure === 1) {
+        // Respond to user selection (Are you sure?)
+        if (areYouSure.sure === 1) {            // Yes = Delete and return to main menu
             console.log(`\x1b[33m\n   ⭐ "${deleteDeptSelected[0][0].Department_Name}" deleted successfully! ⭐\x1b[0m \n`);
             const deleteDeptSQL =
             `
@@ -914,12 +894,11 @@ const deleteDepartment = async () => {
             where id = ?
             ` 
             const deleteDept = await db.promise().query(deleteDeptSQL,deptWhich.dept);
-           
-            launch();
-        } else {
-            launch();
+            
+            launch();   
+        } else {                                // No = Cancel to main menu
+            launch();   
         }
-
     }
     catch (err) {
         console.log(err);        
@@ -938,15 +917,16 @@ const deleteRole = async () => {
     console.log(`\x1b[35m  └─────────────┘\x1b[0m`);    
 
     try{
-        //Show user the list of roles available?
-        viewRoleCalledByFunction = 1            // Set flag to indicate view Roles was called by a function(and to return here instead of going back to main menu)                 
-        await viewRoles();                  // request extract of roles via viewRoles function            
-        //Pull values in for array
-        const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);               // Pull fresh extract of role
-        let roleInquirer = requestRoleInquirer[0];                                                   // Role array 
-        roleInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})      // Add option of cancel and return to main menu
+        // Show all Roles to User
+        viewRoleCalledByFunction = 1;     // Set flag to indicate viewRoles() was called by function (logic in viewRoles() built to return here instead of mainMenu (launch())
+        await viewRoles();                // Display Roles for user to see
+                    
+        // Prepare Role Array for Inquirer
+        const requestRoleInquirer = await db.promise().query(requestRoleInquirerSQL);                   // Pull fresh extract of Roles
+        let roleInquirer = requestRoleInquirer[0];                                                      // Save it as roleInquirer
+        roleInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'});   // Add option of cancel and return to main menu
 
-        //Inquirer prompt
+        // Inquirer prompt
         const roleWhich = await inquirer.prompt ([
             {
                 type: 'list',
@@ -957,25 +937,15 @@ const deleteRole = async () => {
             },
         ]);
 
-        //  If user selects "Cancel and return to main menu" then call launch() and return
+        // If user selects "Cancel and return to main menu" then call launch() and return
         if (roleWhich.role === -1) {                
-            launch()
+            launch();
             return;
-        }
+        };
         
 
-        //Show user the record being targetted for deletion
+        // Show user the record being targetted for deletion
         const deleteRoleSelectedSQL =
-        // ` 
-        // SELECT 
-        // r.id as Role_ID,
-        // r.title as Title,
-        // CONCAT("$",FORMAT(r.salary, 'C')) AS Salary,
-        // d.name as Department
-        // FROM role r
-        // LEFT JOIN department d ON r.department_id = d.id
-        // where r.id = ?;
-        // `
         `
         SELECT 
         r.id as Role_ID,
@@ -988,13 +958,11 @@ const deleteRole = async () => {
         LEFT JOIN employee e ON r.id = e.role_id
         where r.id = ?;
         `
-
-
-
         const deleteRoleSelected = await db.promise().query(deleteRoleSelectedSQL, roleWhich.role);
-        console.table (deleteRoleSelected[0])
+        console.table (deleteRoleSelected[0]);
         console.log(`\x1b[33m\n   ❗Note: The DEPARTMENT and EMPLOYEES are preserved if the ROLE is deleted❗\x1b\n[0m`);
-        //Are you sure
+
+        // Are you sure?
         const areYouSure = await inquirer.prompt ([
             {
                 type: 'list',
@@ -1008,17 +976,19 @@ const deleteRole = async () => {
             }
         ]);
 
-        if (areYouSure.sure === 1) {
+        // Respond to user selection (Are you Sure?)
+        if (areYouSure.sure === 1) {    // Yes = Delete and return to main menu
             console.log(`\x1b[33m\n   ⭐ "${deleteRoleSelected[0][0].Title}" deleted successfully! ⭐\x1b[0m \n`);
             const deleteRoleSQL =
             `
             DELETE FROM role
             where id = ?
             ` 
-            await db.promise().query(deleteRoleSQL,roleWhich.role);           
-            launch();
-        } else {
-            launch();
+            await db.promise().query(deleteRoleSQL,roleWhich.role);       
+
+            launch();                  
+        } else {                        // No = Cancel to main menu
+            launch();                  
         };
     }
     catch (err) {
@@ -1037,15 +1007,16 @@ const deleteEmployee = async () => {
     console.log(`\x1b[35m  └─────────────────┘\x1b[0m`);    
 
     try{
-        //Show user the list of roles available?
-        viewEmpCalledByFunction = 1            // Set flag to indicate view Employes was called by funjction  (and to return here instead of going back to main menu)                 
-        await viewEmployees();                  // request extract of employees via viewEmployees function            
-        //Pull values in for array
-        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL);                       // Pull fresh extract of employees
-        let employeeInquirer = requestEmployeeInquirer[0];                                                          // Employee array 
-        employeeInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'})        // Add option of cancel and return to main menu
+        // Show all Employees to User
+        viewEmpCalledByFunction = 1;        // Set flag to indicate viewEmployes() was called by function (logic in viewEmployees() built to return here instead of mainMenu (launch()
+        await viewEmployees();              // Display Employees for user to see           
+        
+        // Prepare Employee Array for Inquirer
+        const requestEmployeeInquirer = await db.promise().query(requestEmployeeInquirerSQL);                   // Pull fresh extract of employees
+        let employeeInquirer = requestEmployeeInquirer[0];                                                      // Save it as employeeInquirer
+        employeeInquirer.unshift({value: -1, name: ' \x1b[31m↻\x1b[0m  Cancel and return to main Menu'});        // Add option of cancel and return to main menu
 
-        //Inquirer prompt
+        // Inquirer prompt
         const employeeWhich = await inquirer.prompt ([
             {
                 type: 'list',
@@ -1056,14 +1027,13 @@ const deleteEmployee = async () => {
             },
         ]);
 
-        //  If user selects "Cancel and return to main menu" then call launch() and return
+        // If user selects "Cancel and return to main menu" then call launch() and return
         if (employeeWhich.employee === -1) {                
-            launch()
+            launch();
             return;
-        }
-        
+        };        
 
-        //Show user the record being targetted for deletion
+        // Show user the record being targetted for deletion
         const deleteEmployeeelectedSQL =
         ` 
         SELECT 
@@ -1080,9 +1050,9 @@ const deleteEmployee = async () => {
         WHERE e.id = ?;
         `
         const deleteEmployeeSelected = await db.promise().query(deleteEmployeeelectedSQL, employeeWhich.employee);
-        console.table (deleteEmployeeSelected[0])
+        console.table (deleteEmployeeSelected[0]);
 
-        //Are you sure
+        // Are you sure?
         const areYouSure = await inquirer.prompt ([
             {
                 type: 'list',
@@ -1096,16 +1066,18 @@ const deleteEmployee = async () => {
             }
         ]);
 
-        if (areYouSure.sure === 1) {
+        // Respond to user selection (Are you Sure?)
+        if (areYouSure.sure === 1) {    // Yes = Delete and return to main menu
             console.log(`\x1b[33m\n   ⭐ "${deleteEmployeeSelected[0][0].Name}" deleted successfully! ⭐\x1b[0m \n`);
             const deleteEmployeeSQL =
             `
             DELETE FROM employee
             where id = ?
             ` 
-            await db.promise().query(deleteEmployeeSQL,employeeWhich.employee);           
+            await db.promise().query(deleteEmployeeSQL,employeeWhich.employee);  
+
             launch();
-        } else {
+        } else {                        // No = Cancel to main menu
             launch();
         };
     }
@@ -1114,12 +1086,7 @@ const deleteEmployee = async () => {
     };
 };
 
-
-
 //---------------------------------//
 //- Call function to the end user -//
 //---------------------------------//
 launch()
-
-
-
